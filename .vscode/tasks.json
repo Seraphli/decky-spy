@@ -67,6 +67,20 @@
             // },
             "problemMatcher": []
         },
+        // Copy py_modules to defaults folder
+        {
+            "label": "copy-py-modules",
+            "group": "build",
+            "detail": "Copy py_modules to defaults folder",
+            "linux": {
+                "command": "${workspaceFolder}/.vscode/copy-py-modules.sh",
+            },
+            // // placeholder for windows logic, not currently planned
+            // "windows": {
+            //     "command": "call ${workspaceFolder}\\.vscode\\build.bat",
+            // },
+            "problemMatcher": []
+        },
         //"All-in-one" build task
         {
             "label": "build",
@@ -76,6 +90,7 @@
             "dependsOn": [
                 "setup",
                 "settingscheck",
+                "copy-py-modules",
                 "cli-build",
             ],
             "problemMatcher": []

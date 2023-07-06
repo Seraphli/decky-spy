@@ -1,10 +1,12 @@
 {
-  "name": "Example Plugin",
-  "author": "John Doe",
-  "flags": ["debug", "_root"],
+  "name": "Decky Spy",
+  "author": "SErAphLi",
+  "flags": [],
   "publish": {
-    "tags": ["template", "root"],
-    "description": "Decky example plugin.",
-    "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
+    "tags": [
+      "utility"
+    ],
+    "description": "Spy on system information.",
+    "image": "https://opengraph.githubassets.com/1/Seraphli/decky-spy"
   }
 }
