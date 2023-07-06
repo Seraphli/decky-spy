@@ -10,77 +10,117 @@ import {
   ServerAPI,
   showContextMenu,
   staticClasses,
-} from "decky-frontend-lib";
-import { VFC } from "react";
-import { FaShip } from "react-icons/fa";
+  ToastData,
+} from 'decky-frontend-lib';
+import { VFC } from 'react';
+import { useState, useEffect } from 'react';
+import { FaShip } from 'react-icons/fa';
 
-import logo from "../assets/logo.png";
+interface memoryInfo {
+  total: number;
+  available: number;
+  percent: number;
+}
 
-// interface AddMethodArgs {
-//   left: number;
-//   right: number;
-// }
+class Backend {
+  private static serverAPI: ServerAPI;
 
-const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
-  // const [result, setResult] = useState<number | undefined>();
+  static initBackend(server: ServerAPI) {
+    this.setServer(server);
+  }
+  static setServer(server: ServerAPI) {
+    this.serverAPI = server;
+  }
+  static getServer() {
+    return this.serverAPI;
+  }
+  static async bridge(functionName: string, namedArgs?: any) {
+    namedArgs = namedArgs ? namedArgs : {};
+    console.debug(`[AutoSuspend] Calling backend function: ${functionName}`);
+    var output = await this.serverAPI.callPluginMethod(functionName, namedArgs);
+    return output.result;
+  }
+}
 
-  // const onClick = async () => {
-  //   const result = await serverAPI.callPluginMethod<AddMethodArgs, number>(
-  //     "add",
-  //     {
-  //       left: 2,
-  //       right: 2,
-  //     }
-  //   );
-  //   if (result.success) {
-  //     setResult(result.result);
-  //   }
-  // };
+const Content: VFC<{ serverAPI: ServerAPI }> = ({ serverAPI }) => {
+  const [version, setVersion] = useState<string | undefined>();
+
+  const getVersion = async () => {
+    const result = await serverAPI.callPluginMethod<any, string>(
+      'get_version',
+      {}
+    );
+    if (result.success) {
+      setVersion(result.result);
+    }
+  };
+  // {"total": 33559240704, "available": 19613745152, "percent": 41.6}
+  const [memory, setMemory] = useState<memoryInfo | undefined>();
+
+  const getMemory = async () => {
+    const result = await serverAPI.callPluginMethod<any, memoryInfo>(
+      'get_memory',
+      {}
+    );
+    if (result.success) {
+      console.log(result.result);
+      setMemory(result.result);
+    }
+  };
+
+  // Call getVersion when the component mounts
+  useEffect(() => {
+    getVersion();
+  }, []);
+
+  const onCheckVersion = async () => {
+    let toastData: ToastData = {
+      title: 'Hello World',
+      body: version,
+      duration: undefined,
+      sound: 6,
+      playSound: true,
+      showToast: true,
+    };
+    serverAPI.toaster.toast(toastData);
+  };
+
+  const onGetMemory = async () => {
+    await getMemory();
+    let toastData: ToastData = {
+      title: 'Memory',
+      body: JSON.stringify(memory),
+      duration: undefined,
+      sound: 6,
+      playSound: true,
+      showToast: true,
+    };
+    serverAPI.toaster.toast(toastData);
+  };
 
   return (
-    <PanelSection title="Panel Section">
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={(e) =>
-            showContextMenu(
-              <Menu label="Menu" cancelText="CAAAANCEL" onCancel={() => {}}>
-                <MenuItem onSelected={() => {}}>Item #1</MenuItem>
-                <MenuItem onSelected={() => {}}>Item #2</MenuItem>
-                <MenuItem onSelected={() => {}}>Item #3</MenuItem>
-              </Menu>,
-              e.currentTarget ?? window
-            )
-          }
-        >
-          Server says yolo
-        </ButtonItem>
-      </PanelSectionRow>
+    <div>
+      <PanelSection title="Spy Section">
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={onCheckVersion}>
+            Check Version
+          </ButtonItem>
+          <ButtonItem layout="below" onClick={onGetMemory}>
+            Get Memory
+          </ButtonItem>
+        </PanelSectionRow>
 
-      <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <img src={logo} />
-        </div>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => {
-            Router.CloseSideMenus();
-            Router.Navigate("/decky-plugin-test");
-          }}
-        >
-          Router
-        </ButtonItem>
-      </PanelSectionRow>
-    </PanelSection>
+        <PanelSectionRow>
+          <div>Version: {version}</div>
+        </PanelSectionRow>
+      </PanelSection>
+    </div>
   );
 };
 
 const DeckyPluginRouterTest: VFC = () => {
   return (
-    <div style={{ marginTop: "50px", color: "white" }}>
+    <div style={{ marginTop: '50px', color: 'white' }}>
       Hello World!
       <DialogButton onClick={() => Router.NavigateToLibraryTab()}>
         Go to Library
@@ -90,7 +130,9 @@ const DeckyPluginRouterTest: VFC = () => {
 };
 
 export default definePlugin((serverApi: ServerAPI) => {
-  serverApi.routerHook.addRoute("/decky-plugin-test", DeckyPluginRouterTest, {
+  Backend.initBackend(serverApi);
+
+  serverApi.routerHook.addRoute('/decky-plugin-test', DeckyPluginRouterTest, {
     exact: true,
   });
 
@@ -99,7 +141,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     content: <Content serverAPI={serverApi} />,
     icon: <FaShip />,
     onDismount() {
-      serverApi.routerHook.removeRoute("/decky-plugin-test");
+      serverApi.routerHook.removeRoute('/decky-plugin-test');
     },
   };
 });

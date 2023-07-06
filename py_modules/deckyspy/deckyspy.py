@@ -5,9 +5,6 @@ import psutil
 
 
 class DeckySpy:
-    def __init__(self) -> None:
-        pass
-
     @staticmethod
     def get_memory() -> Dict[str, int | float]:
         mem = psutil.virtual_memory()
