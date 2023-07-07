@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import traceback
 from os.path import expanduser
 
 # The decky plugin module is located at decky-loader/plugin
@@ -13,31 +14,55 @@ VENV_PYTHON = f"{HOME}/.pyenv/versions/decky-spy/bin/python"
 
 
 class Plugin:
-    # A normal method. It can be called from JavaScript using call_plugin_function("method_1", argument1, argument2)
-    async def get_memory(self):
-        decky_plugin.logger.info("Call get_memory!")
-        cmd = subprocess.run(
-            [VENV_PYTHON, "deckyspy/cli.py", "get-memory"], capture_output=True
-        )
-        stdout = cmd.stdout.decode()
-        decky_plugin.logger.info(f"stdout capture: {stdout}")
-        return json.loads(stdout)
+    VERSION = decky_plugin.DECKY_PLUGIN_VERSION
 
     async def get_version(self):
-        return decky_plugin.DECKY_PLUGIN_VERSION
+        return json.dumps({"code": 0, "data": self.VERSION})
+
+    async def cli(self, command) -> str:
+        # await Plugin.logPy(self, f"cli call: {command}")
+        try:
+            out = subprocess.check_output(
+                f"{VENV_PYTHON} {os.path.dirname(__file__)}/deckyspy/cli.py {command}",
+                stderr=subprocess.STDOUT,
+                shell=True,
+            ).decode()
+            # await Plugin.logPy(self, f"stdout capture: {out}")
+            return json.dumps({"code": 0, "data": out})
+        except:
+            except_info = traceback.format_exc()
+            await Plugin.logPy(self, f"exception info: {except_info}")
+            return json.dumps({"code": 1, "data": except_info})
+
+    async def get_memory(self):
+        return await Plugin.cli(self, "get-memory")
+
+    async def get_top_k_mem_procs(self):
+        return await Plugin.cli(self, "get-top-k-mem-procs")
+
+    async def get_uptime(self):
+        return await Plugin.cli(self, "get-uptime")
+
+    async def get_battery(self):
+        return await Plugin.cli(self, "get-battery")
+
+    async def log(self, message):
+        decky_plugin.logger.info("[DeckySpy]" + message)
+
+    async def logPy(self, message):
+        decky_plugin.logger.info("[DeckySpy][PyBackend]" + message)
 
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
-        decky_plugin.logger.info("Hello World!")
+        await Plugin.logPy(self, f"Load Decky Spy ver{self.VERSION}")
 
     # Function called first during the unload process, utilize this to handle your plugin being removed
     async def _unload(self):
-        decky_plugin.logger.info("Goodbye World!")
-        pass
+        await Plugin.logPy(self, "Unload Decky Spy")
 
     # Migrations that should be performed before entering `_main()`.
     async def _migration(self):
-        decky_plugin.logger.info("Migrating")
+        await Plugin.logPy(self, "Migrating")
         # Here's a migration example for logs:
         # - `~/.config/decky-template/template.log` will be migrated to `decky_plugin.DECKY_PLUGIN_LOG_DIR/template.log`
         decky_plugin.migrate_logs(

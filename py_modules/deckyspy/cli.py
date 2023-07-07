@@ -24,7 +24,7 @@ def get_top_k_mem_procs(k):
 
 @cli.command()
 def get_uptime():
-    out = json.dumps(DeckySpy.get_uptime())
+    out = DeckySpy.get_uptime()
     print(out)
 
 
