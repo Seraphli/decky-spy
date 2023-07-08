@@ -13,8 +13,7 @@ def test_get_top_k_mem_procs():
     top = DeckySpy.get_top_k_mem_procs()
     print(top)
     assert len(top) > 0
-    assert len(top[0]) == 2
-    assert 0 < top[0][1]["mem"]["rss"]
+    assert 0 < top[0]["mem"]["rss"]
 
 
 def test_get_uptime():

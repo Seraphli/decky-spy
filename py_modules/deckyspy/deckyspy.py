@@ -17,12 +17,19 @@ class DeckySpy:
     @staticmethod
     def get_top_k_mem_procs(
         k=10,
-    ) -> list[tuple[int, dict[str, str | dict[str, int]]]]:
+    ) -> list[Dict[str, int | str | Dict[str, int | float]]]:
         procs = {
-            p.pid: {"name": p.info["name"], "mem": p.info["memory_info"]._asdict()}
+            p.pid: {
+                "pid": p.pid,
+                "name": p.info["name"],
+                "mem": {
+                    "rss": p.info["memory_info"].rss,
+                    "vms": p.info["memory_info"].vms,
+                },
+            }
             for p in psutil.process_iter(["name", "memory_info"])
         }
-        top = sorted(procs.items(), key=lambda x: x[1]["mem"]["rss"], reverse=True)[:k]
+        top = sorted(procs.values(), key=lambda x: x["mem"]["rss"], reverse=True)[:k]
         return top
 
     @staticmethod

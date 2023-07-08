@@ -23,10 +23,21 @@ export interface BatteryInfo {
     power_plugged: number;
 }
 
+export interface ProcsMemInfo {
+    rss: number;
+    vms: number;
+}
+
+export interface ProcsInfo {
+    pid: number;
+    name: string;
+    mem: ProcsMemInfo;
+}
 
 export interface SystemInfo {
     version: string;
     memory: MemoryInfo;
+    topKMemProcs: ProcsInfo[];
     uptime: string;
     battery: BatteryInfo;
 }

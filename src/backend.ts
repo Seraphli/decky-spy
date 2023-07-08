@@ -1,11 +1,9 @@
 import { ServerAPI } from 'decky-frontend-lib';
-import { LogInfo, LogErrorInfo, SystemInfo, MemoryInfo, BatteryInfo } from './interfaces';
+import { LogInfo, LogErrorInfo, SystemInfo, MemoryInfo, BatteryInfo, ProcsInfo } from './interfaces';
 
 
 export class Backend {
     private serverAPI: ServerAPI;
-    private initialized: boolean = false;
-    private pollTimerRef: NodeJS.Timeout | undefined;
 
     public systemInfo: SystemInfo = {
         version: '0.0.0',
@@ -14,6 +12,7 @@ export class Backend {
             available: 0,
             percent: 0,
         },
+        topKMemProcs: [],
         uptime: '0:0:0',
         battery: {
             battery: false,
@@ -27,55 +26,51 @@ export class Backend {
         this.serverAPI = serverAPI;
     }
 
-    async initialize() {
-        if (this.initialized) {
-            return;
-        }
+    async getVersion() {
         const result = await this.bridge('get_version');
-        if (result == null) {
-            return
+        if (result) {
+            this.systemInfo.version = result as string;
         }
-        this.systemInfo.version = result as string;
-        const getMemory = async () => {
-            const result = await this.bridge('get_memory');
-            if (result) {
-                this.systemInfo.memory = JSON.parse(result) as MemoryInfo;
-            }
-        };
-        const getUptime = async () => {
-            const result = await this.bridge('get_uptime');
-            if (result) {
-                this.systemInfo.uptime = result as string;
-            }
-        };
-        const getBattery = async () => {
-            const result = await this.bridge('get_battery');
-            if (result) {
-                this.systemInfo.battery = JSON.parse(result) as BatteryInfo;
-            }
-        };
-        const refreshStatus = async () => {
-            await getMemory();
-            await getUptime();
-            await getBattery();
-        };
-
-        if (this.pollTimerRef) {
-            clearInterval(this.pollTimerRef);
-        }
-        this.pollTimerRef = setInterval(async () => {
-            await refreshStatus();
-        }, 1000);
-
-        this.initialized = true;
     }
+
+    async getMemory() {
+        const result = await this.bridge('get_memory');
+        if (result) {
+            this.systemInfo.memory = JSON.parse(result) as MemoryInfo;
+        }
+    }
+
+    async getTopKMemProcs() {
+        const result = await this.bridge('get_top_k_mem_procs', { k: 1 });
+        if (result) {
+            this.systemInfo.topKMemProcs = JSON.parse(result) as ProcsInfo[];
+        }
+    }
+
+    async getUptime() {
+        const result = await this.bridge('get_uptime');
+        if (result) {
+            this.systemInfo.uptime = result as string;
+        }
+    }
+
+    async getBattery() {
+        const result = await this.bridge('get_battery');
+        if (result) {
+            this.systemInfo.battery = JSON.parse(result) as BatteryInfo;
+        }
+    }
+
+    async refreshStatus() {
+        await this.getVersion();
+        await this.getMemory();
+        await this.getUptime();
+        await this.getBattery();
+        await this.getTopKMemProcs();
+    };
 
     getServerAPI() {
         return this.serverAPI;
-    }
-
-    getInitialized() {
-        return this.initialized;
     }
 
     async log(info: LogInfo) {
@@ -108,12 +103,5 @@ export class Backend {
         const errMessage = `Calling backend function fail: ${ret.result}`;
         await this.log({ sender: "bridge", message: errMessage });
         return null;
-    }
-
-    async onDismount() {
-        if (this.pollTimerRef) {
-            clearInterval(this.pollTimerRef);
-        }
-        await this.log({ sender: "onDismount", message: '' });
     }
 }

@@ -16,7 +16,7 @@ import { VFC } from 'react';
 import { useState, useEffect } from 'react';
 import { FaShip } from 'react-icons/fa';
 import { Backend } from './backend';
-import { BatteryInfo, MemoryInfo } from './interfaces';
+import { BatteryInfo, MemoryInfo, ProcsInfo } from './interfaces';
 
 let pollTimerRef: NodeJS.Timeout | undefined;
 
@@ -24,6 +24,7 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
   const [memory, setMemory] = useState<MemoryInfo | undefined>();
   const [uptime, setUptime] = useState<string | undefined>();
   const [battery, setBattery] = useState<BatteryInfo | undefined>();
+  const [procs, setProcs] = useState<ProcsInfo[] | undefined>();
   // const onCheckVersion = async () => {
   //   let toastData: ToastData = {
   //     title: 'Hello World',
@@ -41,6 +42,7 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
     setMemory(backend.systemInfo.memory);
     setUptime(backend.systemInfo.uptime);
     setBattery(backend.systemInfo.battery);
+    setProcs(backend.systemInfo.topKMemProcs);
   };
   useEffect(() => {
     pollTimerRef = setInterval(async () => {
@@ -67,6 +69,19 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
           <div>Battery: {battery?.percent.toFixed(2)}%</div>
         </PanelSectionRow>
       </PanelSection>
+      <PanelSection title="Process Info">
+        {procs?.map((proc, index) => (
+          <PanelSectionRow key={index}>
+            <div>Process ID: {proc.pid}</div>
+            <div>Name: {proc.name}</div>
+            <div>Memory Info:</div>
+            <ul>
+              <li>RSS: {(proc.mem.rss / 1024 / 1024).toFixed(2)}</li>
+              <li>VMS: {(proc.mem.vms / 1024 / 1024).toFixed(2)}</li>
+            </ul>
+          </PanelSectionRow>
+        ))}
+      </PanelSection>
       <PanelSection title="Configuration">
         {/* <PanelSectionRow>
           <ButtonItem layout="below" onClick={onCheckVersion}>
@@ -90,17 +105,22 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 export default definePlugin((serverAPI: ServerAPI) => {
   const backend = new Backend(serverAPI);
   backend.log({ sender: 'loader', message: 'Plugin Loaded' });
-  if (!backend.getInitialized()) {
-    backend.initialize();
-    backend.log({ sender: 'loader', message: 'Plugin Initializing' });
+
+  if (pollTimerRef) {
+    clearInterval(pollTimerRef);
   }
+  pollTimerRef = setInterval(async () => {
+    await backend.refreshStatus();
+  }, 1000);
 
   return {
     title: <div className={staticClasses.Title}>Decky Spy</div>,
     content: <Content backend={backend} />,
     icon: <FaShip />,
     onDismount() {
-      backend.onDismount();
+      if (pollTimerRef) {
+        clearInterval(pollTimerRef);
+      }
     },
   };
 });

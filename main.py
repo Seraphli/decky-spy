@@ -19,11 +19,11 @@ class Plugin:
     async def get_version(self):
         return json.dumps({"code": 0, "data": self.VERSION})
 
-    async def cli(self, command) -> str:
+    async def cli(self, command, args="") -> str:
         # await Plugin.logPy(self, f"cli call: {command}")
         try:
             out = subprocess.check_output(
-                f"{VENV_PYTHON} {os.path.dirname(__file__)}/deckyspy/cli.py {command}",
+                f"{VENV_PYTHON} {os.path.dirname(__file__)}/deckyspy/cli.py {command} {args}",
                 stderr=subprocess.STDOUT,
                 shell=True,
             ).decode()
@@ -37,8 +37,8 @@ class Plugin:
     async def get_memory(self):
         return await Plugin.cli(self, "get-memory")
 
-    async def get_top_k_mem_procs(self):
-        return await Plugin.cli(self, "get-top-k-mem-procs")
+    async def get_top_k_mem_procs(self, k=1):
+        return await Plugin.cli(self, "get-top-k-mem-procs", f"--k={k}")
 
     async def get_uptime(self):
         return await Plugin.cli(self, "get-uptime")
