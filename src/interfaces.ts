@@ -45,3 +45,10 @@ export interface SystemInfo {
 	uptime: string;
 	battery: BatteryInfo;
 }
+
+export interface Settings {
+	debug: {
+		frontend: boolean;
+		backend: boolean;
+	};
+}

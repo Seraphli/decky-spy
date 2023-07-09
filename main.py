@@ -8,6 +8,7 @@ from os.path import expanduser
 # For easy intellisense checkout the decky-loader code one directory up
 # or add the `decky-loader/plugin` path to `python.analysis.extraPaths` in `.vscode/settings.json`
 import decky_plugin
+from settings import SettingsManager
 
 HOME = expanduser("~")
 VENV_PYTHON = f"{HOME}/.pyenv/versions/decky-spy/bin/python"
@@ -15,23 +16,24 @@ VENV_PYTHON = f"{HOME}/.pyenv/versions/decky-spy/bin/python"
 
 class Plugin:
     VERSION = decky_plugin.DECKY_PLUGIN_VERSION
+    settingsManager = SettingsManager("decky-spy")
 
     async def get_version(self):
         return json.dumps({"code": 0, "data": self.VERSION})
 
     async def cli(self, command, args="") -> str:
-        await Plugin.logPy(self, f"cli call: {command}")
+        await Plugin.log_py(self, f"cli call: {command}")
         try:
             out = subprocess.check_output(
                 f"{VENV_PYTHON} {os.path.dirname(__file__)}/deckyspy/cli.py {command} {args}",
                 stderr=subprocess.STDOUT,
                 shell=True,
             ).decode()
-            await Plugin.logPy(self, f"stdout capture: {out}")
+            await Plugin.log_py(self, f"stdout capture: {out}")
             return json.dumps({"code": 0, "data": out})
         except:
             except_info = traceback.format_exc()
-            await Plugin.logPy(self, f"exception info: {except_info}")
+            await Plugin.log_py_err(self, f"exception info: {except_info}")
             return json.dumps({"code": 1, "data": except_info})
 
     async def get_memory(self):
@@ -47,22 +49,40 @@ class Plugin:
         return await Plugin.cli(self, "get-battery")
 
     async def log(self, message):
-        decky_plugin.logger.info("[DeckySpy]" + message)
+        if await Plugin.get_settings(self, "debug.frontend", False):
+            decky_plugin.logger.info("[DeckySpy][F]" + message)
 
-    async def logPy(self, message):
-        decky_plugin.logger.info("[DeckySpy][PyBackend]" + message)
+    async def log_err(self, message):
+        decky_plugin.logger.error("[DeckySpy][F]" + message)
+
+    async def log_py(self, message):
+        if await Plugin.get_settings(self, "debug.backend", False):
+            decky_plugin.logger.info("[DeckySpy][B]" + message)
+
+    async def log_py_err(self, message):
+        decky_plugin.logger.error("[DeckySpy][B]" + message)
+
+    async def get_settings(self, key, default):
+        return self.settingsManager.getSetting(key, default)
+
+    async def set_settings(self, key, value):
+        self.settingsManager.setSetting(key, value)
+
+    async def commit_settings(self):
+        self.settingsManager.commit()
 
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
-        await Plugin.logPy(self, f"Load Decky Spy ver{self.VERSION}")
+        self.settingsManager.read()
+        decky_plugin.logger.info(f"=== Load Decky Spy ver{self.VERSION} ===")
 
     # Function called first during the unload process, utilize this to handle your plugin being removed
     async def _unload(self):
-        await Plugin.logPy(self, "Unload Decky Spy")
+        decky_plugin.logger.info("=== Unload Decky Spy ===")
 
     # Migrations that should be performed before entering `_main()`.
     async def _migration(self):
-        await Plugin.logPy(self, "Migrating")
+        decky_plugin.logger.info("Migrating")
         # Here's a migration example for logs:
         # - `~/.config/decky-template/template.log` will be migrated to `decky_plugin.DECKY_PLUGIN_LOG_DIR/template.log`
         decky_plugin.migrate_logs(

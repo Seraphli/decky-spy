@@ -11,6 +11,8 @@ import {
 	showContextMenu,
 	staticClasses,
 	ToastData,
+	ToggleField,
+	Focusable,
 } from 'decky-frontend-lib';
 import { VFC } from 'react';
 import { useState, useEffect } from 'react';
@@ -45,6 +47,8 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 		setProcs(backend.systemInfo.topKMemProcs);
 	};
 	useEffect(() => {
+		refreshStatus();
+
 		pollTimerRef = setInterval(async () => {
 			await refreshStatus();
 		}, 500);
@@ -115,10 +119,35 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 					</ButtonItem>
 				</PanelSectionRow> */}
 			</PanelSection>
-
 			<PanelSection title="Debug Info">
 				<PanelSectionRow>
 					<div>Version: {backend.systemInfo.version}</div>
+				</PanelSectionRow>
+				<PanelSectionRow>
+					<div>
+						<ToggleField
+							label="Debug Frontend Mode"
+							description="Enable Frontend debug mode"
+							checked={backend.settings.debug.frontend}
+							onChange={(value) => {
+								backend.settings.debug.frontend = value;
+								backend.saveSettings();
+							}}
+						/>
+					</div>
+				</PanelSectionRow>
+				<PanelSectionRow>
+					<div>
+						<ToggleField
+							label="Debug Backend Mode"
+							description="Enable Backend debug mode"
+							checked={backend.settings.debug.backend}
+							onChange={(value) => {
+								backend.settings.debug.backend = value;
+								backend.saveSettings();
+							}}
+						/>
+					</div>
 				</PanelSectionRow>
 			</PanelSection>
 		</div>

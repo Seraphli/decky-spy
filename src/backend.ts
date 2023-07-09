@@ -6,6 +6,7 @@ import {
 	MemoryInfo,
 	BatteryInfo,
 	ProcsInfo,
+	Settings,
 } from './interfaces';
 
 export class Backend {
@@ -32,6 +33,12 @@ export class Backend {
 			percent: 0,
 			secsleft: 0,
 			plugged: true,
+		},
+	};
+	public settings: Settings = {
+		debug: {
+			frontend: false,
+			backend: false,
 		},
 	};
 
@@ -102,9 +109,51 @@ export class Backend {
 	}
 
 	async logError(info: LogErrorInfo) {
-		await this.serverAPI.callPluginMethod<{ message: string }, any>('log', {
-			message: `[${info.sender}] ${info.message} --> ${info.stack}`,
+		let msg = `[${info.sender}] ${info.message}`;
+		if (info.stack) {
+			msg += ` --> ${info.stack}`;
+		}
+		await this.serverAPI.callPluginMethod<{ message: string }, any>(
+			'log_err',
+			{
+				message: msg,
+			},
+		);
+	}
+
+	async getSettings(key: string, defaultValue: any) {
+		const result = await this.bridge('get_settings', {
+			key,
+			default: defaultValue,
 		});
+		if (result) {
+			return JSON.parse(result);
+		}
+	}
+
+	async setSettings(key: string, value: any) {
+		await this.bridge('set_settings', { key, value });
+	}
+
+	async commitSettings() {
+		await this.bridge('commit_settings');
+	}
+
+	async loadSettings() {
+		this.settings.debug.frontend = await this.getSettings(
+			'debug.frontend',
+			false,
+		);
+		this.settings.debug.backend = await this.getSettings(
+			'debug.backend',
+			false,
+		);
+	}
+
+	async saveSettings() {
+		await this.setSettings('debug.frontend', this.settings.debug.frontend);
+		await this.setSettings('debug.backend', this.settings.debug.backend);
+		await this.commitSettings();
 	}
 
 	async bridge(functionName: string, namedArgs?: any) {
@@ -126,10 +175,10 @@ export class Backend {
 				return payload.data;
 			}
 			const errMessage = `Calling backend function return fail: ${ret.result}`;
-			await this.log({ sender: 'bridge', message: errMessage });
+			await this.logError({ sender: 'bridge', message: errMessage });
 		}
 		const errMessage = `Calling backend function fail: ${ret.result}`;
-		await this.log({ sender: 'bridge', message: errMessage });
+		await this.logError({ sender: 'bridge', message: errMessage });
 		return null;
 	}
 }
