@@ -47,6 +47,7 @@ export interface SystemInfo {
 }
 
 export interface Settings {
+	procs_k: number;
 	debug: {
 		frontend: boolean;
 		backend: boolean;

@@ -36,6 +36,7 @@ export class Backend {
 		},
 	};
 	public settings: Settings = {
+		procs_k: 1,
 		debug: {
 			frontend: true,
 			backend: true,
@@ -62,7 +63,9 @@ export class Backend {
 	}
 
 	async getTopKMemProcs() {
-		const result = await this.bridge('get_top_k_mem_procs', { k: 1 });
+		const result = await this.bridge('get_top_k_mem_procs', {
+			k: this.settings.procs_k,
+		});
 		if (result) {
 			this.systemInfo.topKMemProcs = JSON.parse(result) as ProcsInfo[];
 		}
@@ -139,6 +142,7 @@ export class Backend {
 	}
 
 	async loadSettings() {
+		this.settings.procs_k = await this.getSettings('procs_k', 1);
 		this.settings.debug.frontend = await this.getSettings(
 			'debug.frontend',
 			false,
@@ -150,6 +154,7 @@ export class Backend {
 	}
 
 	async saveSettings() {
+		await this.setSettings('procs_k', this.settings.procs_k);
 		await this.setSettings('debug.frontend', this.settings.debug.frontend);
 		await this.setSettings('debug.backend', this.settings.debug.backend);
 		await this.commitSettings();

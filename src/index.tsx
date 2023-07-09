@@ -12,7 +12,7 @@ import {
 	staticClasses,
 	ToastData,
 	ToggleField,
-	Focusable,
+	SliderField,
 } from 'decky-frontend-lib';
 import { VFC } from 'react';
 import { useState, useEffect } from 'react';
@@ -113,14 +113,21 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 				))}
 			</PanelSection>
 			<PanelSection title="Configuration">
-				{/* <PanelSectionRow>
-					<ButtonItem layout="below" onClick={onCheckVersion}>
-						Check Version
-					</ButtonItem>
-					<ButtonItem layout="below" onClick={onGetMemory}>
-						Get Memory
-					</ButtonItem>
-				</PanelSectionRow> */}
+				<PanelSectionRow>
+					<SliderField
+						label="Num of Process"
+						description="How many processes displayed"
+						value={backend.settings.procs_k}
+						min={1}
+						max={5}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.procs_k = value;
+							backend.saveSettings();
+						}}
+					></SliderField>
+				</PanelSectionRow>
 			</PanelSection>
 			<PanelSection title="Debug Info">
 				<PanelSectionRow>
