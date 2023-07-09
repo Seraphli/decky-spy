@@ -1,26 +1,20 @@
 import {
 	ButtonItem,
 	definePlugin,
-	DialogButton,
-	Menu,
-	MenuItem,
 	PanelSection,
 	PanelSectionRow,
-	Router,
 	ServerAPI,
-	showContextMenu,
 	staticClasses,
-	ToastData,
 	ToggleField,
 	SliderField,
 	Field,
-	Focusable,
 } from 'decky-frontend-lib';
 import { VFC } from 'react';
 import { useState, useEffect } from 'react';
 import { FaWatchmanMonitoring } from 'react-icons/fa';
 import { Backend } from './backend';
 import { BatteryInfo, MemoryInfo, ProcsInfo } from './interfaces';
+import { convertBytesToHumanReadable } from './utils';
 
 let pollTimerRef: NodeJS.Timeout | undefined;
 let backendPollTimerRef: NodeJS.Timeout | undefined;
@@ -30,17 +24,6 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 	const [uptime, setUptime] = useState<string | undefined>();
 	const [battery, setBattery] = useState<BatteryInfo | undefined>();
 	const [procs, setProcs] = useState<ProcsInfo[] | undefined>();
-	// const onCheckVersion = async () => {
-	//   let toastData: ToastData = {
-	//     title: 'Hello World',
-	//     body: version,
-	//     duration: undefined,
-	//     sound: 6,
-	//     playSound: true,
-	//     showToast: true,
-	//   };
-	//   serverAPI.toaster.toast(toastData);
-	// };
 
 	const refreshStatus = async () => {
 		setMemory(backend.systemInfo.memory);
@@ -73,17 +56,17 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 						<br />
 						Mem:{' '}
 						{memory &&
-							`${Backend.convertBytesToHumanReadable(
+							`${convertBytesToHumanReadable(
 								memory.vmem.used,
-							)}/${Backend.convertBytesToHumanReadable(
+							)}/${convertBytesToHumanReadable(
 								memory.vmem.total,
 							)}(${memory.vmem.percent}%)`}
 						<br />
 						Swap:{' '}
 						{memory &&
-							`${Backend.convertBytesToHumanReadable(
+							`${convertBytesToHumanReadable(
 								memory.swap.used,
-							)}/${Backend.convertBytesToHumanReadable(
+							)}/${convertBytesToHumanReadable(
 								memory.swap.total,
 							)}(${memory.swap.percent}%)`}
 						<br />
@@ -95,17 +78,16 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 				{procs?.map((proc, index) => (
 					<PanelSectionRow key={index}>
 						<Field
-							label={`Rank ${index + 1}`}
+							label={`[ ${index + 1} ]`}
 							focusable={true}
-							childrenLayout="below"
+							childrenLayout="inline"
 							childrenContainerWidth="max"
 						>
 							PID: {proc.pid}
 							<br />
 							Name: {proc.name}
 							<br />
-							Mem:{' '}
-							{Backend.convertBytesToHumanReadable(proc.mem.rss)}
+							Mem: {convertBytesToHumanReadable(proc.mem.rss)}
 						</Field>
 					</PanelSectionRow>
 				))}
@@ -124,7 +106,106 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 							backend.settings.procs_k = value;
 							backend.saveSettings();
 						}}
-					></SliderField>
+					/>
+				</PanelSectionRow>
+				<PanelSectionRow>
+					<ToggleField
+						label="OOM Warning"
+						description="Enable OutOfMemory warning"
+						checked={backend.settings.oom.enabled}
+						onChange={(value) => {
+							backend.settings.oom.enabled = value;
+							backend.saveSettings();
+						}}
+					/>
+					<SliderField
+						label="Threshold"
+						description="OOM threshold"
+						value={backend.settings.oom.threshold}
+						min={80}
+						max={100}
+						step={0.1}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.oom.threshold = value;
+							backend.saveSettings();
+						}}
+					/>
+					<ToggleField
+						label="Plus Swap"
+						description="Include swap"
+						checked={backend.settings.oom.plusSwap}
+						onChange={(value) => {
+							backend.settings.oom.plusSwap = value;
+							backend.saveSettings();
+						}}
+					/>
+					<SliderField
+						label="Duration"
+						description="Duration of warning toaster"
+						value={backend.settings.oom.duration}
+						min={3}
+						max={10}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.oom.duration = value;
+							backend.saveSettings();
+						}}
+					/>
+					<SliderField
+						label="Sound"
+						description="Sound of toaster"
+						value={backend.settings.oom.sound}
+						min={0}
+						max={20}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.oom.sound = value;
+							backend.saveSettings();
+						}}
+					/>
+					<ToggleField
+						label="Play Sound"
+						description="Play sound of toaster"
+						checked={backend.settings.oom.playSound}
+						onChange={(value) => {
+							backend.settings.oom.playSound = value;
+							backend.saveSettings();
+						}}
+					/>
+					<SliderField
+						label="Cooldown"
+						description="Cooldown of warning"
+						value={backend.settings.oom.cooldown}
+						min={30}
+						max={600}
+						step={10}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.oom.cooldown = value;
+							backend.saveSettings();
+						}}
+					/>
+					<ToggleField
+						label="Log Details"
+						description="Log details of OOM"
+						checked={backend.settings.oom.logDetails}
+						onChange={(value) => {
+							backend.settings.oom.logDetails = value;
+							backend.saveSettings();
+						}}
+					/>
+					<ButtonItem
+						description="Make a false alarm"
+						layout="below"
+						onClick={() => {
+							backend.oomWarning();
+						}}
+					>
+						Test Warning
+					</ButtonItem>
 				</PanelSectionRow>
 			</PanelSection>
 			<PanelSection title="Debug Info">

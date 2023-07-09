@@ -48,6 +48,16 @@ export interface SystemInfo {
 
 export interface Settings {
 	procs_k: number;
+	oom: {
+		enabled: boolean;
+		threshold: number;
+		plusSwap: boolean;
+		duration: number;
+		sound: number;
+		playSound: boolean;
+		cooldown: number;
+		logDetails: boolean;
+	};
 	debug: {
 		frontend: boolean;
 		backend: boolean;

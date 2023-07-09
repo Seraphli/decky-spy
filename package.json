@@ -1,6 +1,6 @@
 {
   "name": "decky-spy",
-  "version": "0.1.3",
+  "version": "0.2.9",
   "description": "Decky Spy is a plugin to monitor memory and processes on your Steam Deck. It depends on DeckyLoader.",
   "scripts": {
     "build": "shx rm -rf dist && rollup -c",
