@@ -13,6 +13,8 @@ import {
 	ToastData,
 	ToggleField,
 	SliderField,
+	Field,
+	Focusable,
 } from 'decky-frontend-lib';
 import { VFC } from 'react';
 import { useState, useEffect } from 'react';
@@ -62,40 +64,49 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 		<div>
 			<PanelSection title="System Info">
 				<PanelSectionRow>
-					Memory:{' '}
-					{memory &&
-						`${Backend.convertBytesToHumanReadable(
-							memory.vmem.used,
-						)}/${Backend.convertBytesToHumanReadable(
-							memory.vmem.total,
-						)}(${memory.vmem.percent}%)`}
-				</PanelSectionRow>
-				<PanelSectionRow>
-					Swap:{' '}
-					{memory &&
-						`${Backend.convertBytesToHumanReadable(
-							memory.swap.used,
-						)}/${Backend.convertBytesToHumanReadable(
-							memory.swap.total,
-						)}(${memory.swap.percent}%)`}
-				</PanelSectionRow>
-				<PanelSectionRow>Uptime: {uptime}</PanelSectionRow>
-				<PanelSectionRow>
-					Battery: {battery && `${battery.percent.toFixed(2)}%`}
+					<Field
+						focusable={true}
+						childrenLayout="below"
+						childrenContainerWidth="max"
+					>
+						Uptime: {uptime}
+						<br />
+						Mem:{' '}
+						{memory &&
+							`${Backend.convertBytesToHumanReadable(
+								memory.vmem.used,
+							)}/${Backend.convertBytesToHumanReadable(
+								memory.vmem.total,
+							)}(${memory.vmem.percent}%)`}
+						<br />
+						Swap:{' '}
+						{memory &&
+							`${Backend.convertBytesToHumanReadable(
+								memory.swap.used,
+							)}/${Backend.convertBytesToHumanReadable(
+								memory.swap.total,
+							)}(${memory.swap.percent}%)`}
+						<br />
+						Battery: {battery && `${battery.percent.toFixed(2)}%`}
+					</Field>
 				</PanelSectionRow>
 			</PanelSection>
 			<PanelSection title="Process Info">
 				{procs?.map((proc, index) => (
 					<PanelSectionRow key={index}>
-						Rank: {index + 1}
-						<br />
-						Process ID: {proc.pid}
-						<br />
-						Name: {proc.name}
-						<br />
-						Memory Info:{' '}
-						{Backend.convertBytesToHumanReadable(proc.mem.rss)}
-						<br />
+						<Field
+							label={`Rank ${index + 1}`}
+							focusable={true}
+							childrenLayout="below"
+							childrenContainerWidth="max"
+						>
+							PID: {proc.pid}
+							<br />
+							Name: {proc.name}
+							<br />
+							Mem:{' '}
+							{Backend.convertBytesToHumanReadable(proc.mem.rss)}
+						</Field>
 					</PanelSectionRow>
 				))}
 			</PanelSection>
@@ -118,12 +129,14 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 			</PanelSection>
 			<PanelSection title="Debug Info">
 				<PanelSectionRow>
-					Version: {backend.systemInfo.version}
+					<Field label="Version" focusable={true}>
+						{backend.systemInfo.version}
+					</Field>
 				</PanelSectionRow>
 				<PanelSectionRow>
 					<ToggleField
-						label="Debug Frontend Mode"
-						description="Enable Frontend debug mode"
+						label="Frontend"
+						description="Enable Frontend debug"
 						checked={backend.settings.debug.frontend}
 						onChange={(value) => {
 							backend.settings.debug.frontend = value;
@@ -133,8 +146,8 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 				</PanelSectionRow>
 				<PanelSectionRow>
 					<ToggleField
-						label="Debug Backend Mode"
-						description="Enable Backend debug mode"
+						label="Backend"
+						description="Enable Backend debug"
 						checked={backend.settings.debug.backend}
 						onChange={(value) => {
 							backend.settings.debug.backend = value;
