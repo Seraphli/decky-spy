@@ -54,6 +54,7 @@ export class Backend {
 		},
 	};
 	public oomWarnCooldown = true;
+	private cooldownTimerRef: NodeJS.Timeout | null = null;
 
 	constructor(serverAPI: ServerAPI) {
 		this.serverAPI = serverAPI;
@@ -98,7 +99,7 @@ export class Backend {
 	}
 
 	oomWarning() {
-		const warning = formatOOMWarning(this.systemInfo.topKMemProcs[0]);
+		const warning = formatOOMWarning(this.systemInfo);
 		let toastData: ToastData = {
 			title: warning.title,
 			body: warning.body,
@@ -128,7 +129,7 @@ export class Backend {
 			) {
 				const warning = this.oomWarning();
 				this.oomWarnCooldown = false;
-				setTimeout(() => {
+				this.cooldownTimerRef = setTimeout(() => {
 					this.oomWarnCooldown = true;
 				}, this.settings.oom.cooldown * 1000);
 
@@ -270,5 +271,10 @@ export class Backend {
 		return null;
 	}
 
-	onDismount() {}
+	onDismount() {
+		if (this.cooldownTimerRef) {
+			clearInterval(this.cooldownTimerRef);
+			this.oomWarnCooldown = true;
+		}
+	}
 }

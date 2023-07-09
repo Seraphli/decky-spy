@@ -1,12 +1,17 @@
-import { ProcsInfo } from './interfaces';
+import { SystemInfo } from './interfaces';
 
 export const OOMWarningTemplate = {
 	title: 'Out of memory',
-	body: 'OOM! Save! TOP: {#1}[{#2}].',
+	body: 'OOM[{#0}%]! TOP: {#1}[{#2}].',
 };
 
-export function formatOOMWarning(procs: ProcsInfo) {
+export function formatOOMWarning(systemInfo: SystemInfo) {
 	const OOMWarning = { ...OOMWarningTemplate };
+	const procs = systemInfo.topKMemProcs[0];
+	OOMWarning.body = OOMWarning.body.replace(
+		'{#0}',
+		systemInfo.memory.vmem.percent.toString(),
+	);
 	OOMWarning.body = OOMWarning.body.replace('{#1}', procs.name);
 	OOMWarning.body = OOMWarning.body.replace(
 		'{#2}',

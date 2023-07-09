@@ -122,9 +122,9 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 						label="Threshold"
 						description="OOM threshold"
 						value={backend.settings.oom.threshold}
-						min={80}
+						min={50}
 						max={100}
-						step={0.1}
+						step={0.2}
 						showValue={true}
 						onChange={(value) => {
 							backend.settings.oom.threshold = value;
@@ -260,6 +260,7 @@ export default definePlugin((serverAPI: ServerAPI) => {
 			if (backendPollTimerRef) {
 				clearInterval(backendPollTimerRef);
 			}
+			backend.onDismount();
 		},
 	};
 });
