@@ -6,18 +6,24 @@ import psutil
 
 class DeckySpy:
     @staticmethod
-    def get_memory() -> Dict[str, int | float]:
-        mem = psutil.virtual_memory()
+    def get_memory():
+        vmem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
         return {
-            "total": mem.total,
-            "available": mem.available,
-            "percent": mem.percent,
+            "vmem": {
+                "total": vmem.total,
+                "used": vmem.used,
+                "percent": vmem.percent,
+            },
+            "swap": {
+                "total": swap.total,
+                "used": swap.used,
+                "percent": swap.percent,
+            },
         }
 
     @staticmethod
-    def get_top_k_mem_procs(
-        k=10,
-    ) -> list[Dict[str, int | str | Dict[str, int | float]]]:
+    def get_top_k_mem_procs(k=10):
         procs = {
             p.pid: {
                 "pid": p.pid,
@@ -47,11 +53,11 @@ class DeckySpy:
                 "battery": False,
                 "percent": -1,
                 "secsleft": -1,
-                "power_plugged": -1,
+                "plugged": True,
             }
         return {
             "battery": True,
             "percent": battery.percent,
             "secsleft": battery.secsleft,
-            "power_plugged": battery.power_plugged,
+            "plugged": battery.power_plugged,
         }

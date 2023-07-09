@@ -20,14 +20,14 @@ class Plugin:
         return json.dumps({"code": 0, "data": self.VERSION})
 
     async def cli(self, command, args="") -> str:
-        # await Plugin.logPy(self, f"cli call: {command}")
+        await Plugin.logPy(self, f"cli call: {command}")
         try:
             out = subprocess.check_output(
                 f"{VENV_PYTHON} {os.path.dirname(__file__)}/deckyspy/cli.py {command} {args}",
                 stderr=subprocess.STDOUT,
                 shell=True,
             ).decode()
-            # await Plugin.logPy(self, f"stdout capture: {out}")
+            await Plugin.logPy(self, f"stdout capture: {out}")
             return json.dumps({"code": 0, "data": out})
         except:
             except_info = traceback.format_exc()

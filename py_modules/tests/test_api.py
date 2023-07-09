@@ -4,9 +4,9 @@ from deckyspy import DeckySpy
 def test_get_memory():
     mem = DeckySpy.get_memory()
     print(mem)
-    assert 0 < mem["total"]
-    assert 0 < mem["available"]
-    assert 0 < mem["percent"] < 100
+    assert 0 < mem["vmem"]["total"]
+    assert 0 < mem["vmem"]["available"]
+    assert 0 < mem["vmem"]["percent"] < 100
 
 
 def test_get_top_k_mem_procs():

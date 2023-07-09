@@ -1,43 +1,47 @@
 export interface LogInfo {
-    sender: string;
-    message: string;
+	sender: string;
+	message: string;
 }
 
 export interface LogErrorInfo {
-    sender: string;
-    message: string;
-    stack?: string;
+	sender: string;
+	message: string;
+	stack?: string;
 }
 
+export interface _MemoryInfo {
+	used: number;
+	total: number;
+	percent: number;
+}
 
 export interface MemoryInfo {
-    total: number;
-    available: number;
-    percent: number;
+	vmem: _MemoryInfo;
+	swap: _MemoryInfo;
 }
 
 export interface BatteryInfo {
-    battery: boolean;
-    percent: number;
-    secsleft: number;
-    power_plugged: number;
+	battery: boolean;
+	percent: number;
+	secsleft: number;
+	plugged: boolean;
 }
 
 export interface ProcsMemInfo {
-    rss: number;
-    vms: number;
+	rss: number;
+	vms: number;
 }
 
 export interface ProcsInfo {
-    pid: number;
-    name: string;
-    mem: ProcsMemInfo;
+	pid: number;
+	name: string;
+	mem: ProcsMemInfo;
 }
 
 export interface SystemInfo {
-    version: string;
-    memory: MemoryInfo;
-    topKMemProcs: ProcsInfo[];
-    uptime: string;
-    battery: BatteryInfo;
+	version: string;
+	memory: MemoryInfo;
+	topKMemProcs: ProcsInfo[];
+	uptime: string;
+	battery: BatteryInfo;
 }

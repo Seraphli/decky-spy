@@ -252,7 +252,7 @@ packages:
   registry.npmmirror.com/@types/react@16.14.0:
     resolution: {integrity: sha512-gIkl4J44G/qxbuC6r2Xh+D3CGZpJ+NdWTItAPmZbR5mUS+JQ8Zvzpl0ea5qT/ZT3ZNTUcDKUVqV3xBE8wv/DyQ==, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/react/-/react-16.9.56.tgz}
     name: '@types/react'
-    version: 16.9.56
+    version: 16.14.0
     deprecated: '[WARNING] Use 16.9.56 instead of 16.14.0, reason: https://github.com/DefinitelyTyped/DefinitelyTyped/issues/49713'
     dependencies:
       '@types/prop-types': registry.npmmirror.com/@types/prop-types@15.7.5

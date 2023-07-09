@@ -1,107 +1,135 @@
 import { ServerAPI } from 'decky-frontend-lib';
-import { LogInfo, LogErrorInfo, SystemInfo, MemoryInfo, BatteryInfo, ProcsInfo } from './interfaces';
-
+import {
+	LogInfo,
+	LogErrorInfo,
+	SystemInfo,
+	MemoryInfo,
+	BatteryInfo,
+	ProcsInfo,
+} from './interfaces';
 
 export class Backend {
-    private serverAPI: ServerAPI;
+	private serverAPI: ServerAPI;
 
-    public systemInfo: SystemInfo = {
-        version: '0.0.0',
-        memory: {
-            total: 0,
-            available: 0,
-            percent: 0,
-        },
-        topKMemProcs: [],
-        uptime: '0:0:0',
-        battery: {
-            battery: false,
-            percent: 0,
-            secsleft: 0,
-            power_plugged: 0,
-        },
-    };
+	public systemInfo: SystemInfo = {
+		version: '0.0.0',
+		memory: {
+			vmem: {
+				used: 0,
+				total: 0,
+				percent: 0,
+			},
+			swap: {
+				used: 0,
+				total: 0,
+				percent: 0,
+			},
+		},
+		topKMemProcs: [],
+		uptime: '0:0:0',
+		battery: {
+			battery: false,
+			percent: 0,
+			secsleft: 0,
+			plugged: true,
+		},
+	};
 
-    constructor(serverAPI: ServerAPI) {
-        this.serverAPI = serverAPI;
-    }
+	constructor(serverAPI: ServerAPI) {
+		this.serverAPI = serverAPI;
+	}
 
-    async getVersion() {
-        const result = await this.bridge('get_version');
-        if (result) {
-            this.systemInfo.version = result as string;
-        }
-    }
+	async getVersion() {
+		const result = await this.bridge('get_version');
+		if (result) {
+			this.systemInfo.version = result as string;
+		}
+	}
 
-    async getMemory() {
-        const result = await this.bridge('get_memory');
-        if (result) {
-            this.systemInfo.memory = JSON.parse(result) as MemoryInfo;
-        }
-    }
+	async getMemory() {
+		const result = await this.bridge('get_memory');
+		if (result) {
+			this.systemInfo.memory = JSON.parse(result) as MemoryInfo;
+		}
+	}
 
-    async getTopKMemProcs() {
-        const result = await this.bridge('get_top_k_mem_procs', { k: 1 });
-        if (result) {
-            this.systemInfo.topKMemProcs = JSON.parse(result) as ProcsInfo[];
-        }
-    }
+	async getTopKMemProcs() {
+		const result = await this.bridge('get_top_k_mem_procs', { k: 1 });
+		if (result) {
+			this.systemInfo.topKMemProcs = JSON.parse(result) as ProcsInfo[];
+		}
+	}
 
-    async getUptime() {
-        const result = await this.bridge('get_uptime');
-        if (result) {
-            this.systemInfo.uptime = result as string;
-        }
-    }
+	async getUptime() {
+		const result = await this.bridge('get_uptime');
+		if (result) {
+			this.systemInfo.uptime = result as string;
+		}
+	}
 
-    async getBattery() {
-        const result = await this.bridge('get_battery');
-        if (result) {
-            this.systemInfo.battery = JSON.parse(result) as BatteryInfo;
-        }
-    }
+	async getBattery() {
+		const result = await this.bridge('get_battery');
+		if (result) {
+			this.systemInfo.battery = JSON.parse(result) as BatteryInfo;
+		}
+	}
 
-    async refreshStatus() {
-        await this.getVersion();
-        await this.getMemory();
-        await this.getUptime();
-        await this.getBattery();
-        await this.getTopKMemProcs();
-    };
+	async refreshStatus() {
+		await this.getVersion();
+		await this.getMemory();
+		await this.getUptime();
+		await this.getBattery();
+		await this.getTopKMemProcs();
+	}
 
-    getServerAPI() {
-        return this.serverAPI;
-    }
+	getServerAPI() {
+		return this.serverAPI;
+	}
 
-    async log(info: LogInfo) {
-        await this.serverAPI.callPluginMethod<{ message: string }, any>('log', {
-            message: `[${info.sender}] ${info.message}`,
-        });
-    }
+	static convertBytesToHumanReadable(bytes: number) {
+		const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+		if (bytes == 0) {
+			return '0 Byte';
+		}
+		const i = Math.floor(Math.log(bytes) / Math.log(1024));
+		return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
+	}
 
-    async logError(info: LogErrorInfo) {
-        await this.serverAPI.callPluginMethod<{ message: string }, any>('log', {
-            message: `[${info.sender}] ${info.message} --> ${info.stack}`,
-        });
-    }
+	async log(info: LogInfo) {
+		await this.serverAPI.callPluginMethod<{ message: string }, any>('log', {
+			message: `[${info.sender}] ${info.message}`,
+		});
+	}
 
-    async bridge(functionName: string, namedArgs?: any) {
-        namedArgs = namedArgs ? namedArgs : {};
-        const ret = await this.serverAPI.callPluginMethod<any, string>(functionName, namedArgs);
-        await this.log({ sender: "bridge", message: `${functionName} return ${JSON.stringify(ret)}` });
-        if (ret.success) {
-            if (ret.result == null) {
-                return null;
-            }
-            const payload = JSON.parse(ret.result);
-            if (payload.code == 0) {
-                return payload.data;
-            }
-            const errMessage = `Calling backend function return fail: ${ret.result}`;
-            await this.log({ sender: "bridge", message: errMessage });
-        }
-        const errMessage = `Calling backend function fail: ${ret.result}`;
-        await this.log({ sender: "bridge", message: errMessage });
-        return null;
-    }
+	async logError(info: LogErrorInfo) {
+		await this.serverAPI.callPluginMethod<{ message: string }, any>('log', {
+			message: `[${info.sender}] ${info.message} --> ${info.stack}`,
+		});
+	}
+
+	async bridge(functionName: string, namedArgs?: any) {
+		namedArgs = namedArgs ? namedArgs : {};
+		const ret = await this.serverAPI.callPluginMethod<any, string>(
+			functionName,
+			namedArgs,
+		);
+		await this.log({
+			sender: 'bridge',
+			message: `${functionName} return ${JSON.stringify(ret)}`,
+		});
+		if (ret.success) {
+			if (ret.result == null) {
+				return null;
+			}
+			const payload = JSON.parse(ret.result);
+			if (payload.code == 0) {
+				return payload.data;
+			}
+			const errMessage = `Calling backend function return fail: ${ret.result}`;
+			await this.log({ sender: 'bridge', message: errMessage });
+		}
+		const errMessage = `Calling backend function fail: ${ret.result}`;
+		await this.log({ sender: 'bridge', message: errMessage });
+		return null;
+	}
 }
