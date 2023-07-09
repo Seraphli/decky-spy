@@ -93,22 +93,9 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 						<br />
 						Name: {proc.name}
 						<br />
-						Memory Info:
+						Memory Info:{' '}
+						{Backend.convertBytesToHumanReadable(proc.mem.rss)}
 						<br />
-						<ul>
-							<li>
-								RSS:{' '}
-								{Backend.convertBytesToHumanReadable(
-									proc.mem.rss,
-								)}
-							</li>
-							<li>
-								VMS:{' '}
-								{Backend.convertBytesToHumanReadable(
-									proc.mem.vms,
-								)}
-							</li>
-						</ul>
 					</PanelSectionRow>
 				))}
 			</PanelSection>
