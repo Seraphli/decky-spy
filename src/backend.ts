@@ -37,13 +37,14 @@ export class Backend {
 	};
 	public settings: Settings = {
 		debug: {
-			frontend: false,
-			backend: false,
+			frontend: true,
+			backend: true,
 		},
 	};
 
 	constructor(serverAPI: ServerAPI) {
 		this.serverAPI = serverAPI;
+		this.loadSettings();
 	}
 
 	async getVersion() {
@@ -126,9 +127,7 @@ export class Backend {
 			key,
 			default: defaultValue,
 		});
-		if (result) {
-			return JSON.parse(result);
-		}
+		return JSON.parse(result);
 	}
 
 	async setSettings(key: string, value: any) {
@@ -174,10 +173,10 @@ export class Backend {
 			if (payload.code == 0) {
 				return payload.data;
 			}
-			const errMessage = `Calling backend function return fail: ${ret.result}`;
+			const errMessage = `${functionName} return fail: ${ret}`;
 			await this.logError({ sender: 'bridge', message: errMessage });
 		}
-		const errMessage = `Calling backend function fail: ${ret.result}`;
+		const errMessage = `${functionName} fail: ${ret}`;
 		await this.logError({ sender: 'bridge', message: errMessage });
 		return null;
 	}

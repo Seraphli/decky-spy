@@ -16,7 +16,9 @@ VENV_PYTHON = f"{HOME}/.pyenv/versions/decky-spy/bin/python"
 
 class Plugin:
     VERSION = decky_plugin.DECKY_PLUGIN_VERSION
-    settingsManager = SettingsManager("decky-spy")
+    settingsManager = SettingsManager(
+        "decky-spy", os.environ["DECKY_PLUGIN_SETTINGS_DIR"]
+    )
 
     async def get_version(self):
         return json.dumps({"code": 0, "data": self.VERSION})
@@ -49,21 +51,26 @@ class Plugin:
         return await Plugin.cli(self, "get-battery")
 
     async def log(self, message):
-        if await Plugin.get_settings(self, "debug.frontend", False):
+        value = await Plugin.get_settings(self, "debug.frontend", False, string=False)
+        if value:
             decky_plugin.logger.info("[DeckySpy][F]" + message)
 
     async def log_err(self, message):
         decky_plugin.logger.error("[DeckySpy][F]" + message)
 
     async def log_py(self, message):
-        if await Plugin.get_settings(self, "debug.backend", False):
+        value = await Plugin.get_settings(self, "debug.backend", False, string=False)
+        if value:
             decky_plugin.logger.info("[DeckySpy][B]" + message)
 
     async def log_py_err(self, message):
         decky_plugin.logger.error("[DeckySpy][B]" + message)
 
-    async def get_settings(self, key, default):
-        return self.settingsManager.getSetting(key, default)
+    async def get_settings(self, key, default, string=True):
+        value = self.settingsManager.getSetting(key, default)
+        if string:
+            return json.dumps({"code": 0, "data": value})
+        return value
 
     async def set_settings(self, key, value):
         self.settingsManager.setSetting(key, value)

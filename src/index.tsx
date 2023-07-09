@@ -47,11 +47,9 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 		setProcs(backend.systemInfo.topKMemProcs);
 	};
 	useEffect(() => {
-		refreshStatus();
-
 		pollTimerRef = setInterval(async () => {
 			await refreshStatus();
-		}, 500);
+		}, 200);
 
 		return () => {
 			if (pollTimerRef) {
@@ -64,48 +62,53 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 		<div>
 			<PanelSection title="System Info">
 				<PanelSectionRow>
-					<div>
-						Memory:{' '}
-						{memory &&
-							`${Backend.convertBytesToHumanReadable(
-								memory.vmem.used,
-							)}/${Backend.convertBytesToHumanReadable(
-								memory.vmem.total,
-							)}(${memory.vmem.percent}%)`}
-					</div>
+					Memory:{' '}
+					{memory &&
+						`${Backend.convertBytesToHumanReadable(
+							memory.vmem.used,
+						)}/${Backend.convertBytesToHumanReadable(
+							memory.vmem.total,
+						)}(${memory.vmem.percent}%)`}
 				</PanelSectionRow>
 				<PanelSectionRow>
-					<div>Uptime: {uptime}</div>
+					Swap:{' '}
+					{memory &&
+						`${Backend.convertBytesToHumanReadable(
+							memory.swap.used,
+						)}/${Backend.convertBytesToHumanReadable(
+							memory.swap.total,
+						)}(${memory.swap.percent}%)`}
 				</PanelSectionRow>
+				<PanelSectionRow>Uptime: {uptime}</PanelSectionRow>
 				<PanelSectionRow>
-					<div>
-						Battery: {battery && `${battery.percent.toFixed(2)}%`}
-					</div>
+					Battery: {battery && `${battery.percent.toFixed(2)}%`}
 				</PanelSectionRow>
 			</PanelSection>
 			<PanelSection title="Process Info">
 				{procs?.map((proc, index) => (
 					<PanelSectionRow key={index}>
-						<div>
-							<div>Rank: {index + 1}</div>
-							<div>Process ID: {proc.pid}</div>
-							<div>Name: {proc.name}</div>
-							<div>Memory Info:</div>
-							<ul>
-								<li>
-									RSS:{' '}
-									{Backend.convertBytesToHumanReadable(
-										proc.mem.rss,
-									)}
-								</li>
-								<li>
-									VMS:{' '}
-									{Backend.convertBytesToHumanReadable(
-										proc.mem.vms,
-									)}
-								</li>
-							</ul>
-						</div>
+						Rank: {index + 1}
+						<br />
+						Process ID: {proc.pid}
+						<br />
+						Name: {proc.name}
+						<br />
+						Memory Info:
+						<br />
+						<ul>
+							<li>
+								RSS:{' '}
+								{Backend.convertBytesToHumanReadable(
+									proc.mem.rss,
+								)}
+							</li>
+							<li>
+								VMS:{' '}
+								{Backend.convertBytesToHumanReadable(
+									proc.mem.vms,
+								)}
+							</li>
+						</ul>
 					</PanelSectionRow>
 				))}
 			</PanelSection>
@@ -121,33 +124,29 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 			</PanelSection>
 			<PanelSection title="Debug Info">
 				<PanelSectionRow>
-					<div>Version: {backend.systemInfo.version}</div>
+					Version: {backend.systemInfo.version}
 				</PanelSectionRow>
 				<PanelSectionRow>
-					<div>
-						<ToggleField
-							label="Debug Frontend Mode"
-							description="Enable Frontend debug mode"
-							checked={backend.settings.debug.frontend}
-							onChange={(value) => {
-								backend.settings.debug.frontend = value;
-								backend.saveSettings();
-							}}
-						/>
-					</div>
+					<ToggleField
+						label="Debug Frontend Mode"
+						description="Enable Frontend debug mode"
+						checked={backend.settings.debug.frontend}
+						onChange={(value) => {
+							backend.settings.debug.frontend = value;
+							backend.saveSettings();
+						}}
+					/>
 				</PanelSectionRow>
 				<PanelSectionRow>
-					<div>
-						<ToggleField
-							label="Debug Backend Mode"
-							description="Enable Backend debug mode"
-							checked={backend.settings.debug.backend}
-							onChange={(value) => {
-								backend.settings.debug.backend = value;
-								backend.saveSettings();
-							}}
-						/>
-					</div>
+					<ToggleField
+						label="Debug Backend Mode"
+						description="Enable Backend debug mode"
+						checked={backend.settings.debug.backend}
+						onChange={(value) => {
+							backend.settings.debug.backend = value;
+							backend.saveSettings();
+						}}
+					/>
 				</PanelSectionRow>
 			</PanelSection>
 		</div>
