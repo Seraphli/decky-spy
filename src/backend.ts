@@ -173,6 +173,7 @@ export class Backend {
 			const battery = this.systemInfo.battery;
 			if (!battery.battery || battery.plugged) {
 				this.batteryWarnStep = 0;
+				return;
 			}
 			if (
 				battery.percent <=
