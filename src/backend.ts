@@ -8,7 +8,7 @@ import {
 	ProcsInfo,
 	Settings,
 } from './interfaces';
-import { formatOOMWarning } from './utils';
+import { formatOOMWarning, formatBatteryWarning } from './utils';
 
 export class Backend {
 	private serverAPI: ServerAPI;
@@ -42,11 +42,18 @@ export class Backend {
 			enabled: true,
 			threshold: 99.5,
 			plusSwap: true,
-			duration: 5,
-			sound: 6,
-			playSound: true,
 			cooldown: 600,
 			logDetails: true,
+		},
+		battery: {
+			enabled: true,
+			threshold: 30,
+			step: 5,
+		},
+		toaster: {
+			duration: 5,
+			sound: 8,
+			playSound: true,
 		},
 		debug: {
 			frontend: true,
@@ -54,6 +61,7 @@ export class Backend {
 		},
 	};
 	public oomWarnCooldown = true;
+	public batteryWarnStep = 0;
 	private cooldownTimerRef: NodeJS.Timeout | null = null;
 
 	constructor(serverAPI: ServerAPI) {
@@ -103,9 +111,9 @@ export class Backend {
 		let toastData: ToastData = {
 			title: warning.title,
 			body: warning.body,
-			duration: this.settings.oom.duration * 1000,
-			sound: this.settings.oom.sound,
-			playSound: this.settings.oom.playSound,
+			duration: this.settings.toaster.duration * 1000,
+			sound: this.settings.toaster.sound,
+			playSound: this.settings.toaster.playSound,
 			showToast: true,
 		};
 		this.serverAPI.toaster.toast(toastData);
@@ -145,6 +153,47 @@ export class Backend {
 		}
 	}
 
+	// Detect low battery
+	batteryWarning() {
+		const warning = formatBatteryWarning(this.systemInfo);
+		let toastData: ToastData = {
+			title: warning.title,
+			body: warning.body,
+			duration: this.settings.toaster.duration * 1000,
+			sound: this.settings.toaster.sound,
+			playSound: this.settings.toaster.playSound,
+			showToast: true,
+		};
+		this.serverAPI.toaster.toast(toastData);
+		return warning;
+	}
+
+	async detectBattery() {
+		if (this.settings.battery.enabled) {
+			const battery = this.systemInfo.battery;
+			if (!battery.battery || battery.plugged) {
+				this.batteryWarnStep = 0;
+			}
+			if (
+				battery.percent <=
+				this.settings.battery.threshold -
+					this.batteryWarnStep * this.settings.battery.step
+			) {
+				this.batteryWarnStep =
+					Math.floor(
+						(this.settings.battery.threshold - battery.percent) /
+							this.settings.battery.step,
+					) + 1;
+				const warning = this.batteryWarning();
+				await this.logError({
+					sender: 'Battery',
+					message: warning.body,
+					stack: JSON.stringify(this.systemInfo),
+				});
+			}
+		}
+	}
+
 	async refreshStatus() {
 		await this.getVersion();
 		await this.getMemory();
@@ -154,6 +203,8 @@ export class Backend {
 
 		// Detect OOM
 		await this.detectOOM();
+		// Detect low battery
+		await this.detectBattery();
 	}
 
 	getServerAPI() {
@@ -197,6 +248,7 @@ export class Backend {
 
 	async loadSettings() {
 		this.settings.procs_k = await this.getSettings('procs_k', 1);
+
 		this.settings.oom.enabled = await this.getSettings('oom.enabled', true);
 		this.settings.oom.threshold = await this.getSettings(
 			'oom.threshold',
@@ -204,12 +256,6 @@ export class Backend {
 		);
 		this.settings.oom.plusSwap = await this.getSettings(
 			'oom.plusSwap',
-			true,
-		);
-		this.settings.oom.duration = await this.getSettings('oom.duration', 5);
-		this.settings.oom.sound = await this.getSettings('oom.sound', 6);
-		this.settings.oom.playSound = await this.getSettings(
-			'oom.playSound',
 			true,
 		);
 		this.settings.oom.cooldown = await this.getSettings(
@@ -220,6 +266,30 @@ export class Backend {
 			'oom.logDetails',
 			true,
 		);
+
+		this.settings.battery.enabled = await this.getSettings(
+			'battery.enabled',
+			true,
+		);
+		this.settings.battery.threshold = await this.getSettings(
+			'battery.threshold',
+			10,
+		);
+		this.settings.battery.step = await this.getSettings('battery.step', 5);
+
+		this.settings.toaster.duration = await this.getSettings(
+			'toaster.duration',
+			5,
+		);
+		this.settings.toaster.sound = await this.getSettings(
+			'toaster.sound',
+			6,
+		);
+		this.settings.toaster.playSound = await this.getSettings(
+			'toaster.playSound',
+			true,
+		);
+
 		this.settings.debug.frontend = await this.getSettings(
 			'debug.frontend',
 			false,
@@ -232,14 +302,33 @@ export class Backend {
 
 	async saveSettings() {
 		await this.setSettings('procs_k', this.settings.procs_k);
+
 		await this.setSettings('oom.enabled', this.settings.oom.enabled);
 		await this.setSettings('oom.threshold', this.settings.oom.threshold);
 		await this.setSettings('oom.plusSwap', this.settings.oom.plusSwap);
-		await this.setSettings('oom.duration', this.settings.oom.duration);
-		await this.setSettings('oom.sound', this.settings.oom.sound);
-		await this.setSettings('oom.playSound', this.settings.oom.playSound);
 		await this.setSettings('oom.cooldown', this.settings.oom.cooldown);
 		await this.setSettings('oom.logDetails', this.settings.oom.logDetails);
+
+		await this.setSettings(
+			'battery.enabled',
+			this.settings.battery.enabled,
+		);
+		await this.setSettings(
+			'battery.threshold',
+			this.settings.battery.threshold,
+		);
+		await this.setSettings('battery.step', this.settings.battery.step);
+
+		await this.setSettings(
+			'toaster.duration',
+			this.settings.toaster.duration,
+		);
+		await this.setSettings('toaster.sound', this.settings.toaster.sound);
+		await this.setSettings(
+			'toaster.playSound',
+			this.settings.toaster.playSound,
+		);
+
 		await this.setSettings('debug.frontend', this.settings.debug.frontend);
 		await this.setSettings('debug.backend', this.settings.debug.backend);
 		await this.commitSettings();

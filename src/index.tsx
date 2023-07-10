@@ -93,7 +93,12 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 				))}
 			</PanelSection>
 			<PanelSection title="Configuration">
-				<PanelSectionRow>
+				<Field
+					label="Process Info"
+					focusable={false}
+					highlightOnFocus={false}
+					childrenLayout="below"
+				>
 					<SliderField
 						label="Num of Process"
 						description="How many processes displayed"
@@ -107,8 +112,13 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 							backend.saveSettings();
 						}}
 					/>
-				</PanelSectionRow>
-				<PanelSectionRow>
+				</Field>
+				<Field
+					label="Out of Memory"
+					focusable={false}
+					highlightOnFocus={false}
+					childrenLayout="below"
+				>
 					<ToggleField
 						label="OOM Warning"
 						description="Enable OutOfMemory warning"
@@ -141,41 +151,6 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 						}}
 					/>
 					<SliderField
-						label="Duration"
-						description="Duration of warning toaster"
-						value={backend.settings.oom.duration}
-						min={3}
-						max={10}
-						step={1}
-						showValue={true}
-						onChange={(value) => {
-							backend.settings.oom.duration = value;
-							backend.saveSettings();
-						}}
-					/>
-					<SliderField
-						label="Sound"
-						description="Sound of toaster"
-						value={backend.settings.oom.sound}
-						min={0}
-						max={20}
-						step={1}
-						showValue={true}
-						onChange={(value) => {
-							backend.settings.oom.sound = value;
-							backend.saveSettings();
-						}}
-					/>
-					<ToggleField
-						label="Play Sound"
-						description="Play sound of toaster"
-						checked={backend.settings.oom.playSound}
-						onChange={(value) => {
-							backend.settings.oom.playSound = value;
-							backend.saveSettings();
-						}}
-					/>
-					<SliderField
 						label="Cooldown"
 						description="Cooldown of warning"
 						value={backend.settings.oom.cooldown}
@@ -197,45 +172,131 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 							backend.saveSettings();
 						}}
 					/>
+				</Field>
+				<Field
+					label="Low Battery"
+					focusable={false}
+					highlightOnFocus={false}
+					childrenLayout="below"
+				>
+					<ToggleField
+						label="Low Battery Warning"
+						description="Enable low battery warning"
+						checked={backend.settings.battery.enabled}
+						onChange={(value) => {
+							backend.settings.battery.enabled = value;
+							backend.saveSettings();
+						}}
+					/>
+					<SliderField
+						label="Threshold"
+						description="Low battery threshold"
+						value={backend.settings.battery.threshold}
+						min={5}
+						max={50}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.battery.threshold = value;
+							backend.saveSettings();
+						}}
+					/>
+					<SliderField
+						label="Step"
+						description="Step of warning after passing threshold"
+						value={backend.settings.battery.step}
+						min={1}
+						max={10}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.battery.step = value;
+							backend.saveSettings();
+						}}
+					/>
+				</Field>
+				<Field
+					label="Toaster"
+					focusable={false}
+					highlightOnFocus={false}
+					childrenLayout="below"
+				>
+					<SliderField
+						label="Duration"
+						description="Duration of warning toaster"
+						value={backend.settings.toaster.duration}
+						min={3}
+						max={10}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.toaster.duration = value;
+							backend.saveSettings();
+						}}
+					/>
+					<SliderField
+						label="Sound"
+						description="Sound of toaster"
+						value={backend.settings.toaster.sound}
+						min={0}
+						max={20}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							backend.settings.toaster.sound = value;
+							backend.saveSettings();
+						}}
+					/>
+					<ToggleField
+						label="Play Sound"
+						description="Play sound of toaster"
+						checked={backend.settings.toaster.playSound}
+						onChange={(value) => {
+							backend.settings.toaster.playSound = value;
+							backend.saveSettings();
+						}}
+					/>
 					<ButtonItem
-						description="Make a false alarm"
 						layout="below"
 						onClick={() => {
 							backend.oomWarning();
 						}}
 					>
-						Test Warning
+						Test OOM Warning
 					</ButtonItem>
-				</PanelSectionRow>
+					<ButtonItem
+						layout="below"
+						onClick={() => {
+							backend.batteryWarning();
+						}}
+					>
+						Test Battery Warning
+					</ButtonItem>
+				</Field>
 			</PanelSection>
 			<PanelSection title="Debug Info">
-				<PanelSectionRow>
-					<Field label="Version" focusable={true}>
-						{backend.systemInfo.version}
-					</Field>
-				</PanelSectionRow>
-				<PanelSectionRow>
-					<ToggleField
-						label="Frontend"
-						description="Enable Frontend debug"
-						checked={backend.settings.debug.frontend}
-						onChange={(value) => {
-							backend.settings.debug.frontend = value;
-							backend.saveSettings();
-						}}
-					/>
-				</PanelSectionRow>
-				<PanelSectionRow>
-					<ToggleField
-						label="Backend"
-						description="Enable Backend debug"
-						checked={backend.settings.debug.backend}
-						onChange={(value) => {
-							backend.settings.debug.backend = value;
-							backend.saveSettings();
-						}}
-					/>
-				</PanelSectionRow>
+				<Field label="Version" focusable={true}>
+					{backend.systemInfo.version}
+				</Field>
+				<ToggleField
+					label="Frontend"
+					description="Enable Frontend debug"
+					checked={backend.settings.debug.frontend}
+					onChange={(value) => {
+						backend.settings.debug.frontend = value;
+						backend.saveSettings();
+					}}
+				/>
+
+				<ToggleField
+					label="Backend"
+					description="Enable Backend debug"
+					checked={backend.settings.debug.backend}
+					onChange={(value) => {
+						backend.settings.debug.backend = value;
+						backend.saveSettings();
+					}}
+				/>
 			</PanelSection>
 		</div>
 	);

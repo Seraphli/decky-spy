@@ -52,11 +52,18 @@ export interface Settings {
 		enabled: boolean;
 		threshold: number;
 		plusSwap: boolean;
+		logDetails: boolean;
+		cooldown: number;
+	};
+	battery: {
+		enabled: boolean;
+		threshold: number;
+		step: number;
+	};
+	toaster: {
 		duration: number;
 		sound: number;
 		playSound: boolean;
-		cooldown: number;
-		logDetails: boolean;
 	};
 	debug: {
 		frontend: boolean;
