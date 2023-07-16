@@ -28,7 +28,7 @@ export class Backend {
 			},
 		},
 		topKMemProcs: [],
-		uptime: '0:0:0',
+		uptime: 0,
 		battery: {
 			battery: false,
 			percent: 0,
@@ -72,14 +72,16 @@ export class Backend {
 	async getVersion() {
 		const result = await this.bridge('get_version');
 		if (result) {
-			this.systemInfo.version = result as string;
+			const data = result as string;
+			if (data) this.systemInfo.version = data;
 		}
 	}
 
 	async getMemory() {
 		const result = await this.bridge('get_memory');
 		if (result) {
-			this.systemInfo.memory = JSON.parse(result) as MemoryInfo;
+			const data = JSON.parse(result) as MemoryInfo;
+			if (data) this.systemInfo.memory = data;
 		}
 	}
 
@@ -88,21 +90,24 @@ export class Backend {
 			k: this.settings.procs_k,
 		});
 		if (result) {
-			this.systemInfo.topKMemProcs = JSON.parse(result) as ProcsInfo[];
+			const data = JSON.parse(result) as ProcsInfo[];
+			if (data) this.systemInfo.topKMemProcs = data;
 		}
 	}
 
 	async getUptime() {
 		const result = await this.bridge('get_uptime');
 		if (result) {
-			this.systemInfo.uptime = result as string;
+			const data = result as number;
+			if (data) this.systemInfo.uptime = data;
 		}
 	}
 
 	async getBattery() {
 		const result = await this.bridge('get_battery');
 		if (result) {
-			this.systemInfo.battery = JSON.parse(result) as BatteryInfo;
+			const data = JSON.parse(result) as BatteryInfo;
+			if (data) this.systemInfo.battery = data;
 		}
 	}
 
@@ -178,12 +183,12 @@ export class Backend {
 			if (
 				battery.percent <=
 				this.settings.battery.threshold -
-					this.batteryWarnStep * this.settings.battery.step
+				this.batteryWarnStep * this.settings.battery.step
 			) {
 				this.batteryWarnStep =
 					Math.floor(
 						(this.settings.battery.threshold - battery.percent) /
-							this.settings.battery.step,
+						this.settings.battery.step,
 					) + 1;
 				const warning = this.batteryWarning();
 				await this.logError({

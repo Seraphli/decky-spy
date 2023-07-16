@@ -42,7 +42,7 @@ export interface SystemInfo {
 	version: string;
 	memory: MemoryInfo;
 	topKMemProcs: ProcsInfo[];
-	uptime: string;
+	uptime: number;
 	battery: BatteryInfo;
 }
 

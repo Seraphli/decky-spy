@@ -21,19 +21,19 @@ export function formatOOMWarning(systemInfo: SystemInfo) {
 }
 
 export const BatteryWarningTemplate = {
-	title: 'Low Battery [{#0}%]',
-	body: 'Time left: {#1}.',
+	title: 'Battery [{#0}%]',
+	body: '{#1}.',
 };
 
 export function formatBatteryWarning(systemInfo: SystemInfo) {
 	const batteryWarning = { ...BatteryWarningTemplate };
 	batteryWarning.title = batteryWarning.title.replace(
 		'{#0}',
-		systemInfo.battery.percent.toFixed(1).toString(),
+		systemInfo.battery.percent.toFixed(2).toString(),
 	);
 	batteryWarning.body = batteryWarning.body.replace(
 		'{#1}',
-		convertSecondsToHumanReadable(systemInfo.battery.secsleft),
+		systemInfo.battery.plugged ? "Plugged" : `Time left: ${convertSecondsToHumanReadable(systemInfo.battery.secsleft)}`,
 	);
 	return batteryWarning;
 }
@@ -49,11 +49,18 @@ export function convertBytesToHumanReadable(bytes: number) {
 }
 
 export function convertSecondsToHumanReadable(seconds: number) {
+	// If longer than 24 hours, display in days
+	if (seconds > 86400) {
+		const days = Math.floor(seconds / 86400);
+		const hours = Math.floor((seconds % 86400) / 3600);
+		const minutes = Math.floor(((seconds % 86400) % 3600) / 60);
+		const secs = Math.floor(((seconds % 86400) % 3600) % 60);
+		// Display two decimal, padding with 0
+		return `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+	}
 	const hours = Math.floor(seconds / 3600);
 	const minutes = Math.floor((seconds % 3600) / 60);
 	const secs = Math.floor((seconds % 3600) % 60);
 	// Display two decimal, padding with 0
-	return `${hours}:${minutes.toString().padStart(2, '0')}:${secs
-		.toString()
-		.padStart(2, '0')}`;
+	return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }

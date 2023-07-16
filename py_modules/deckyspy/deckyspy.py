@@ -39,11 +39,9 @@ class DeckySpy:
         return top
 
     @staticmethod
-    def get_uptime() -> str:
+    def get_uptime() -> float:
         uptime = time.time() - psutil.boot_time()
-        # Convert time to a readable format
-        uptime_readable = time.strftime("%H:%M:%S", time.gmtime(uptime))
-        return uptime_readable
+        return uptime
 
     @staticmethod
     def get_battery() -> Dict[str, int | float]:

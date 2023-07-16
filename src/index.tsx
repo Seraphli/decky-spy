@@ -14,22 +14,22 @@ import { useState, useEffect } from 'react';
 import { FaWatchmanMonitoring } from 'react-icons/fa';
 import { Backend } from './backend';
 import { BatteryInfo, MemoryInfo, ProcsInfo } from './interfaces';
-import { convertBytesToHumanReadable } from './utils';
+import { convertBytesToHumanReadable, convertSecondsToHumanReadable } from './utils';
 
 let pollTimerRef: NodeJS.Timeout | undefined;
 let backendPollTimerRef: NodeJS.Timeout | undefined;
 
 const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 	const [memory, setMemory] = useState<MemoryInfo | undefined>();
-	const [uptime, setUptime] = useState<string | undefined>();
+	const [uptime, setUptime] = useState<number | undefined>();
 	const [battery, setBattery] = useState<BatteryInfo | undefined>();
 	const [procs, setProcs] = useState<ProcsInfo[] | undefined>();
 
 	const refreshStatus = async () => {
-		setMemory(backend.systemInfo.memory);
-		setUptime(backend.systemInfo.uptime);
-		setBattery(backend.systemInfo.battery);
-		setProcs(backend.systemInfo.topKMemProcs);
+		backend.systemInfo.memory && setMemory(backend.systemInfo.memory);
+		backend.systemInfo.uptime && setUptime(backend.systemInfo.uptime);
+		backend.systemInfo.battery && setBattery(backend.systemInfo.battery);
+		backend.systemInfo.topKMemProcs && setProcs(backend.systemInfo.topKMemProcs);
 	};
 	useEffect(() => {
 		pollTimerRef = setInterval(async () => {
@@ -52,7 +52,7 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 						childrenLayout="below"
 						childrenContainerWidth="max"
 					>
-						Uptime: {uptime}
+						Uptime: {uptime && convertSecondsToHumanReadable(uptime)}
 						<br />
 						Mem:{' '}
 						{memory &&
