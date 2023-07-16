@@ -74,6 +74,9 @@ export interface Settings {
 		threshold: number;
 		step: number;
 	};
+	network: {
+		enabled: boolean;
+	};
 	toaster: {
 		duration: number;
 		sound: number;

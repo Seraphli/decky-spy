@@ -107,29 +107,38 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 				))}
 			</PanelSection>
 			<PanelSection title="Network Info">
-				{netInterfaces?.map((ni, index) => (
-					<PanelSectionRow key={index}>
-						<Field
-							label={`[ ${ni.name} ]`}
-							focusable={true}
-							childrenLayout="below"
-							childrenContainerWidth="max"
-						>
-							{ni.addresses.map((addr, index) => (
-								<div
-									key={index}
-									style={{
-										wordBreak: 'break-word',
-										overflowWrap: 'break-word',
-										whiteSpace: 'normal',
-									}}
-								>
-									{addr.family}: {addr.address}
-								</div>
-							))}
-						</Field>
-					</PanelSectionRow>
-				))}
+				<ToggleField
+					label="Show Network Info"
+					checked={backend.settings.network.enabled}
+					onChange={(value) => {
+						backend.settings.network.enabled = value;
+						backend.saveSettings();
+					}}
+				/>
+				{backend.settings.network.enabled &&
+					netInterfaces?.map((ni, index) => (
+						<PanelSectionRow key={index}>
+							<Field
+								label={`[ ${ni.name} ]`}
+								focusable={true}
+								childrenLayout="below"
+								childrenContainerWidth="max"
+							>
+								{ni.addresses.map((addr, index) => (
+									<div
+										key={index}
+										style={{
+											wordBreak: 'break-word',
+											overflowWrap: 'break-word',
+											whiteSpace: 'normal',
+										}}
+									>
+										{addr.family}: {addr.address}
+									</div>
+								))}
+							</Field>
+						</PanelSectionRow>
+					))}
 			</PanelSection>
 			<PanelSection title="Configuration">
 				<Field
