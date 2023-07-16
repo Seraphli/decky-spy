@@ -38,12 +38,26 @@ export interface ProcsInfo {
 	mem: ProcsMemInfo;
 }
 
+export interface AddressInfo {
+	family: string;
+	address: string;
+	netmask: string;
+	broadcast: string;
+	p2p: string;
+}
+
+export interface NetInterfaceInfo {
+	name: string;
+	addresses: AddressInfo[];
+}
+
 export interface SystemInfo {
 	version: string;
 	memory: MemoryInfo;
 	topKMemProcs: ProcsInfo[];
 	uptime: number;
 	battery: BatteryInfo;
+	nis: NetInterfaceInfo[];
 }
 
 export interface Settings {

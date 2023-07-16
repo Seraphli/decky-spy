@@ -34,5 +34,11 @@ def get_battery():
     print(out)
 
 
+@cli.command()
+def get_net_interface():
+    out = json.dumps(DeckySpy.get_net_interface())
+    print(out)
+
+
 if __name__ == "__main__":
     cli()

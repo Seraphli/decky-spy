@@ -5,6 +5,7 @@ import {
 	SystemInfo,
 	MemoryInfo,
 	BatteryInfo,
+	NetInterfaceInfo,
 	ProcsInfo,
 	Settings,
 } from './interfaces';
@@ -35,6 +36,7 @@ export class Backend {
 			secsleft: 0,
 			plugged: true,
 		},
+		nis: [],
 	};
 	public settings: Settings = {
 		procs_k: 1,
@@ -110,6 +112,15 @@ export class Backend {
 			if (data) this.systemInfo.battery = data;
 		}
 	}
+
+	async getNIs() {
+		const result = await this.bridge('get_net_interface');
+		if (result) {
+			const data = JSON.parse(result) as NetInterfaceInfo[];
+			if (data) this.systemInfo.nis = data;
+		}
+	}
+
 
 	oomWarning() {
 		const warning = formatOOMWarning(this.systemInfo);
@@ -206,6 +217,7 @@ export class Backend {
 		await this.getUptime();
 		await this.getBattery();
 		await this.getTopKMemProcs();
+		await this.getNIs();
 
 		// Detect OOM
 		await this.detectOOM();

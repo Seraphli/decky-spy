@@ -50,6 +50,9 @@ class Plugin:
     async def get_battery(self):
         return await Plugin.cli(self, "get-battery")
 
+    async def get_net_interface(self):
+        return await Plugin.cli(self, "get-net-interface")
+
     async def log(self, message):
         value = await Plugin.get_settings(self, "debug.frontend", False, string=False)
         if value:

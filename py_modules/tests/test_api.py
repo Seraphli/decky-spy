@@ -27,3 +27,11 @@ def test_get_battery():
     print(battery)
     if battery["battery"]:
         assert 0 <= battery["percent"] <= 100
+
+
+def test_get_net_interface():
+    interfaces = DeckySpy.get_net_interface()
+    print(interfaces)
+    for i in interfaces:
+        if i["name"] == "lo":
+            assert i["addresses"][0]["address"] == "127.0.0.1"
