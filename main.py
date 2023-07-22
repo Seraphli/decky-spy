@@ -27,7 +27,7 @@ class Plugin:
         await Plugin.log_py(self, f"cli call: {command}")
         try:
             out = subprocess.check_output(
-                f"{VENV_PYTHON} {os.path.dirname(__file__)}/deckyspy/cli.py {command} {args}",
+                f"{VENV_PYTHON} '{os.path.dirname(__file__)}/deckyspy/cli.py' {command} {args}",
                 stderr=subprocess.STDOUT,
                 shell=True,
             ).decode()
