@@ -29,7 +29,7 @@ export function formatBatteryWarning(systemInfo: SystemInfo) {
 	const batteryWarning = { ...BatteryWarningTemplate };
 	batteryWarning.title = batteryWarning.title.replace(
 		'{#0}',
-		systemInfo.battery.percent.toFixed(2).toString(),
+		isNaN(systemInfo.battery.percent) ? '0' : systemInfo.battery.percent.toFixed(2).toString(),
 	);
 	batteryWarning.body = batteryWarning.body.replace(
 		'{#1}',
@@ -45,7 +45,11 @@ export function convertBytesToHumanReadable(bytes: number) {
 		return '0 B';
 	}
 	const i = Math.floor(Math.log(bytes) / Math.log(1024));
-	return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(2))} ${sizes[i]}`;
+	const num = bytes / Math.pow(1024, i);
+	if (isNaN(num)) {
+		return '0 B';
+	}
+	return `${parseFloat(num.toFixed(2))} ${sizes[i]}`;
 }
 
 export function convertSecondsToHumanReadable(seconds: number) {
