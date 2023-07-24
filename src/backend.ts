@@ -8,6 +8,7 @@ import {
 	NetInterfaceInfo,
 	ProcsInfo,
 	Settings,
+	BackendReturn,
 } from './interfaces';
 import { formatOOMWarning, formatBatteryWarning } from './utils';
 
@@ -68,6 +69,7 @@ export class Backend {
 	public oomWarnCooldown = true;
 	public batteryWarnStep = 0;
 	private cooldownTimerRef: NodeJS.Timeout | null = null;
+	private saveTimerRef: NodeJS.Timeout | null = null;
 
 	constructor(serverAPI: ServerAPI) {
 		this.serverAPI = serverAPI;
@@ -298,7 +300,7 @@ export class Backend {
 		this.settings.debug.backend = await this.getSettings('debug.backend', true);
 	}
 
-	async saveSettings() {
+	async _saveSettings() {
 		await this.setSettings('procs_k', this.settings.procs_k);
 
 		await this.setSettings('oom.enabled', this.settings.oom.enabled);
@@ -322,13 +324,20 @@ export class Backend {
 		await this.commitSettings();
 	}
 
+	async saveSettings() {
+		if (this.saveTimerRef) clearTimeout(this.saveTimerRef)
+		this.saveTimerRef = setTimeout(async () => {
+			await this._saveSettings();
+		}, 1000)
+	}
+
 	async bridge(functionName: string, namedArgs?: any) {
 		namedArgs = namedArgs ? namedArgs : {};
 		await this.log({
 			sender: 'bridge',
 			message: `${functionName} call with ${JSON.stringify(namedArgs)}`,
 		});
-		const ret = await this.serverAPI.callPluginMethod<any, {code: number, data: any}>(
+		const ret = await this.serverAPI.callPluginMethod<any, BackendReturn>(
 			functionName,
 			namedArgs,
 		);
@@ -340,7 +349,7 @@ export class Backend {
 			if (ret.result == null) {
 				return null;
 			}
-			const payload = ret.result as {code: number, data: any};
+			const payload = ret.result as BackendReturn;
 			if (payload.code == 0) {
 				return payload.data;
 			}

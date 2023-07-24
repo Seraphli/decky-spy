@@ -87,3 +87,5 @@ export interface Settings {
 		backend: boolean;
 	};
 }
+
+export interface BackendReturn { code: number, data: any }
