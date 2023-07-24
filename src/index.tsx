@@ -47,7 +47,7 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 	useEffect(() => {
 		pollTimerRef = setInterval(async () => {
 			await refreshStatus();
-		}, 500);
+		}, 1000);
 
 		return () => {
 			if (pollTimerRef) {
@@ -357,9 +357,12 @@ export default definePlugin((serverAPI: ServerAPI) => {
 	if (backendPollTimerRef) {
 		clearInterval(backendPollTimerRef);
 	}
-	backendPollTimerRef = setInterval(async () => {
-		await backend.refreshStatus();
-	}, 1000);
+	setTimeout(async () => {
+		await backend.setup();
+		backendPollTimerRef = setInterval(async () => {
+			await backend.refreshStatus();
+		}, 2000);
+	}, 100);
 
 	return {
 		title: <div className={staticClasses.Title}>Decky Spy</div>,

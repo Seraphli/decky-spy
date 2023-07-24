@@ -71,12 +71,17 @@ export class Backend {
 
 	constructor(serverAPI: ServerAPI) {
 		this.serverAPI = serverAPI;
-		this.loadSettings();
+	}
+
+	async setup() {
+		await this.loadSettings();
+		await this.saveSettings();
+		await this.getVersion();
 	}
 
 	async getVersion() {
 		const result = await this.bridge('get_version');
-		if (result) {
+		if (result && result !== null) {
 			const data = result as string;
 			if (data) this.systemInfo.version = data;
 		}
@@ -84,7 +89,7 @@ export class Backend {
 
 	async getMemory() {
 		const result = await this.bridge('get_memory');
-		if (result) {
+		if (result && result !== null) {
 			const data = JSON.parse(result) as MemoryInfo;
 			if (data) this.systemInfo.memory = data;
 		}
@@ -94,7 +99,7 @@ export class Backend {
 		const result = await this.bridge('get_top_k_mem_procs', {
 			k: this.settings.procs_k,
 		});
-		if (result) {
+		if (result && result !== null) {
 			const data = JSON.parse(result) as ProcsInfo[];
 			if (data) this.systemInfo.topKMemProcs = data;
 		}
@@ -102,7 +107,7 @@ export class Backend {
 
 	async getUptime() {
 		const result = await this.bridge('get_uptime');
-		if (result) {
+		if (result && result !== null) {
 			const data = result as number;
 			if (data) this.systemInfo.uptime = data;
 		}
@@ -110,7 +115,7 @@ export class Backend {
 
 	async getBattery() {
 		const result = await this.bridge('get_battery');
-		if (result) {
+		if (result && result !== null) {
 			const data = JSON.parse(result) as BatteryInfo;
 			if (data) this.systemInfo.battery = data;
 		}
@@ -118,7 +123,7 @@ export class Backend {
 
 	async getNIs() {
 		const result = await this.bridge('get_net_interface');
-		if (result) {
+		if (result && result !== null) {
 			const data = JSON.parse(result) as NetInterfaceInfo[];
 			if (data) this.systemInfo.nis = data;
 		}
@@ -215,7 +220,6 @@ export class Backend {
 	}
 
 	async refreshStatus() {
-		await this.getVersion();
 		await this.getMemory();
 		await this.getUptime();
 		await this.getBattery();
@@ -233,6 +237,7 @@ export class Backend {
 	}
 
 	async log(info: LogInfo) {
+		console.log(`[${info.sender}] ${info.message}`);
 		await this.serverAPI.callPluginMethod<{ message: string }, any>('log', {
 			message: `[${info.sender}] ${info.message}`,
 		});
@@ -256,7 +261,10 @@ export class Backend {
 			key,
 			default: defaultValue,
 		});
-		return JSON.parse(result);
+		if (result && result !== null) {
+			return JSON.parse(result);
+		}
+		return defaultValue;
 	}
 
 	async setSettings(key: string, value: any) {
@@ -286,8 +294,8 @@ export class Backend {
 		this.settings.toaster.sound = await this.getSettings('toaster.sound', 6);
 		this.settings.toaster.playSound = await this.getSettings('toaster.playSound', true);
 
-		this.settings.debug.frontend = await this.getSettings('debug.frontend', false,);
-		this.settings.debug.backend = await this.getSettings('debug.backend', false,);
+		this.settings.debug.frontend = await this.getSettings('debug.frontend', true);
+		this.settings.debug.backend = await this.getSettings('debug.backend', true);
 	}
 
 	async saveSettings() {
@@ -316,7 +324,11 @@ export class Backend {
 
 	async bridge(functionName: string, namedArgs?: any) {
 		namedArgs = namedArgs ? namedArgs : {};
-		const ret = await this.serverAPI.callPluginMethod<any, string>(
+		await this.log({
+			sender: 'bridge',
+			message: `${functionName} call with ${JSON.stringify(namedArgs)}`,
+		});
+		const ret = await this.serverAPI.callPluginMethod<any, {code: number, data: any}>(
 			functionName,
 			namedArgs,
 		);
@@ -328,7 +340,7 @@ export class Backend {
 			if (ret.result == null) {
 				return null;
 			}
-			const payload = JSON.parse(ret.result);
+			const payload = ret.result as {code: number, data: any};
 			if (payload.code == 0) {
 				return payload.data;
 			}

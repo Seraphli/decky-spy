@@ -21,10 +21,10 @@ class Plugin:
     )
 
     async def get_version(self):
-        return json.dumps({"code": 0, "data": self.VERSION})
+        return {"code": 0, "data": self.VERSION}
 
-    async def cli(self, command, args="") -> str:
-        await Plugin.log_py(self, f"cli call: {command}")
+    async def cli(self, command, args=""):
+        await Plugin.log_py(self, f"cli call: {command} {args}")
         try:
             out = subprocess.check_output(
                 f"{VENV_PYTHON} '{os.path.dirname(__file__)}/deckyspy/cli.py' {command} {args}",
@@ -32,11 +32,15 @@ class Plugin:
                 shell=True,
             ).decode()
             await Plugin.log_py(self, f"stdout capture: {out}")
-            return json.dumps({"code": 0, "data": out})
+            payload = {"code": 0, "data": out}
+            await Plugin.log_py(self, f"return payload: {payload}")
+            return payload
         except:
             except_info = traceback.format_exc()
             await Plugin.log_py_err(self, f"exception info: {except_info}")
-            return json.dumps({"code": 1, "data": except_info})
+            payload = {"code": 1, "data": except_info}
+            await Plugin.log_py(self, f"return payload: {payload}")
+            return payload
 
     async def get_memory(self):
         return await Plugin.cli(self, "get-memory")
@@ -72,7 +76,7 @@ class Plugin:
     async def get_settings(self, key, default, string=True):
         value = self.settingsManager.getSetting(key, default)
         if string:
-            return json.dumps({"code": 0, "data": value})
+            return {"code": 0, "data": value}
         return value
 
     async def set_settings(self, key, value):

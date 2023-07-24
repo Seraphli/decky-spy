@@ -36,6 +36,9 @@ devDependencies:
   rollup-plugin-import-assets:
     specifier: ^1.1.1
     version: 1.1.1(rollup@2.77.1)
+  rollup-sourcemap-path-transform:
+    specifier: ^1.0.3
+    version: 1.0.3(rollup@2.77.1)
   shx:
     specifier: ^0.3.4
     version: 0.3.4
@@ -732,6 +735,15 @@ packages:
     resolution: {integrity: sha512-EEp9NhnUkwY8aif6bxgovPHMoMoNr2FulJziTndpt5H9RdwC47GSGuII9XxpSdzVGM0GWrNPHV6ie1LTNJPaLQ==}
     dependencies:
       estree-walker: 0.6.1
+    dev: true
+
+  /rollup-sourcemap-path-transform@1.0.3(rollup@2.77.1):
+    resolution: {integrity: sha512-uTyxkJVehOBX/NxxafULq4l7DpYxhIzqqudfNJsiujntYsfFSeUndU2Ui51HpOlmwPWUezCzn2KZUOFbbXdwBQ==}
+    engines: {node: '>= 14.18'}
+    peerDependencies:
+      rollup: ^2 || ^3
+    dependencies:
+      rollup: 2.77.1
     dev: true
 
   /rollup@2.77.1:
