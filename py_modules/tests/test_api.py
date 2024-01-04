@@ -22,6 +22,12 @@ def test_get_uptime():
     assert uptime
 
 
+def test_get_uptime_since_powerup():
+    uptime = DeckySpy.get_uptime_since_powerup()
+    print(uptime)
+    assert uptime
+
+
 def test_get_battery():
     battery = DeckySpy.get_battery()
     print(battery)

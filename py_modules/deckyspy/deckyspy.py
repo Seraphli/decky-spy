@@ -1,8 +1,11 @@
+import datetime
 import socket
+import subprocess
 import time
 from typing import Dict
 
 import psutil
+from dateutil import parser
 
 af_map = {
     socket.AF_INET: "IPv4",
@@ -49,6 +52,39 @@ class DeckySpy:
     def get_uptime() -> float:
         uptime = time.time() - psutil.boot_time()
         return uptime
+
+    @staticmethod
+    def get_uptime_since_powerup() -> float:
+        # Retrieve the last 1000 logs from systemd-logind
+        cmd = "journalctl -b -u systemd-logind -n 1000"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        log = result.stdout
+
+        current_time = datetime.datetime.now()
+        current_year = current_time.year
+        previous_year = current_year - 1
+
+        # Look for the last boot or wake event
+        for line in reversed(log.splitlines()):
+            if (
+                "Operation 'sleep' finished" in line
+                or "Starting User Login Management" in line
+            ):
+                try:
+                    # Extract and parse the date and time
+                    date_time_str = " ".join(line.split()[:3])
+                    event_time = parser.parse(date_time_str, fuzzy=True)
+
+                    # Adjust the year if necessary
+                    if event_time.month == 12 and current_time.month == 1:
+                        event_time = event_time.replace(year=previous_year)
+
+                    uptime = current_time - event_time
+                    return uptime.total_seconds()
+                except ValueError:
+                    continue
+
+        return 0
 
     @staticmethod
     def get_battery() -> Dict[str, int | float]:

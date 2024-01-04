@@ -29,6 +29,12 @@ def get_uptime():
 
 
 @cli.command()
+def get_uptime_since_powerup():
+    uptime = DeckySpy.get_uptime_since_powerup()
+    print(uptime)
+
+
+@cli.command()
 def get_battery():
     out = json.dumps(DeckySpy.get_battery())
     print(out)
