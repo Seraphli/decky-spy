@@ -16,16 +16,10 @@ def test_get_top_k_mem_procs():
     assert 0 < top[0]["mem"]["rss"]
 
 
-def test_get_uptime():
-    uptime = DeckySpy.get_uptime()
-    print(uptime)
-    assert uptime
-
-
-def test_get_uptime_since_powerup():
-    uptime = DeckySpy.get_uptime_since_powerup()
-    print(uptime)
-    assert uptime
+def test_get_boottime():
+    boottime = DeckySpy.get_boottime()
+    print(boottime)
+    assert boottime
 
 
 def test_get_battery():

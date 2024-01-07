@@ -1,4 +1,4 @@
-import { ServerAPI, ToastData } from 'decky-frontend-lib';
+import { ServerAPI, ToastData, Router } from 'decky-frontend-lib';
 import {
 	LogInfo,
 	LogErrorInfo,
@@ -9,67 +9,29 @@ import {
 	ProcsInfo,
 	Settings,
 	BackendReturn,
+	DefaultSystemInfo,
+	DefaultSettings,
 } from './interfaces';
-import { formatOOMWarning, formatBatteryWarning } from './utils';
+import {
+	formatOOMWarning,
+	formatBatteryWarning,
+	formatAntiAddictWarning,
+} from './utils';
 
 export class Backend {
 	private serverAPI: ServerAPI;
 
-	public systemInfo: SystemInfo = {
-		version: '0.0.0',
-		memory: {
-			vmem: {
-				used: 0,
-				total: 0,
-				percent: 0,
-			},
-			swap: {
-				used: 0,
-				total: 0,
-				percent: 0,
-			},
-		},
-		topKMemProcs: [],
-		uptime: 0,
-		battery: {
-			battery: false,
-			percent: 0,
-			secsleft: 0,
-			plugged: true,
-		},
-		nis: [],
-	};
-	public settings: Settings = {
-		procs_k: 1,
-		oom: {
-			enabled: true,
-			threshold: 99.5,
-			plusSwap: true,
-			cooldown: 600,
-			logDetails: true,
-		},
-		battery: {
-			enabled: true,
-			threshold: 30,
-			step: 5,
-		},
-		network: {
-			enabled: true,
-		},
-		toaster: {
-			duration: 5,
-			sound: 8,
-			playSound: true,
-		},
-		debug: {
-			frontend: true,
-			backend: true,
-		},
-	};
-	public oomWarnCooldown = true;
+	public systemInfo: SystemInfo = DefaultSystemInfo;
+	public settings: Settings = DefaultSettings;
+	public refreshStep = 0;
+	public oomWarnInterval = true;
 	public batteryWarnStep = 0;
-	private cooldownTimerRef: NodeJS.Timeout | null = null;
-	private saveTimerRef: NodeJS.Timeout | null = null;
+	public playtime: number = 0; // in seconds
+	public debugInfo: string[] = [];
+	private oomIntervalTimerRef: NodeJS.Timeout | null = null;
+	private aaLastWarnTime: number = 0;
+	private queueForSaveTime: number | null = null;
+	private unregisterHandlers: (() => void)[] = [];
 
 	constructor(serverAPI: ServerAPI) {
 		this.serverAPI = serverAPI;
@@ -79,6 +41,9 @@ export class Backend {
 		await this.loadSettings();
 		await this.saveSettings();
 		await this.getVersion();
+		await this.getBoottime();
+
+		this.unregisterHandlers.push(this.setupSuspendResumeHandler());
 	}
 
 	async getVersion() {
@@ -107,11 +72,11 @@ export class Backend {
 		}
 	}
 
-	async getUptime() {
-		const result = await this.bridge('get_uptime');
+	async getBoottime() {
+		const result = await this.bridge('get_boottime');
 		if (result && result !== null) {
 			const data = result as number;
-			if (data) this.systemInfo.uptime = data;
+			if (data) this.systemInfo.boottime = data;
 		}
 	}
 
@@ -130,7 +95,6 @@ export class Backend {
 			if (data) this.systemInfo.nis = data;
 		}
 	}
-
 
 	oomWarning() {
 		const warning = formatOOMWarning(this.systemInfo);
@@ -158,14 +122,14 @@ export class Backend {
 				: mem.vmem.used;
 			const percent = usedMem / totalMem;
 			if (
-				this.oomWarnCooldown &&
+				this.oomWarnInterval &&
 				percent > this.settings.oom.threshold / 100
 			) {
 				const warning = this.oomWarning();
-				this.oomWarnCooldown = false;
-				this.cooldownTimerRef = setTimeout(() => {
-					this.oomWarnCooldown = true;
-				}, this.settings.oom.cooldown * 1000);
+				this.oomWarnInterval = false;
+				this.oomIntervalTimerRef = setTimeout(() => {
+					this.oomWarnInterval = true;
+				}, this.settings.oom.interval * 60000);
 
 				// Log details if enabled
 				if (this.settings.oom.logDetails) {
@@ -204,12 +168,12 @@ export class Backend {
 			if (
 				battery.percent <=
 				this.settings.battery.threshold -
-				this.batteryWarnStep * this.settings.battery.step
+					this.batteryWarnStep * this.settings.battery.step
 			) {
 				this.batteryWarnStep =
 					Math.floor(
 						(this.settings.battery.threshold - battery.percent) /
-						this.settings.battery.step,
+							this.settings.battery.step,
 					) + 1;
 				const warning = this.batteryWarning();
 				await this.logError({
@@ -221,17 +185,86 @@ export class Backend {
 		}
 	}
 
-	async refreshStatus() {
-		await this.getMemory();
-		await this.getUptime();
-		await this.getBattery();
-		await this.getTopKMemProcs();
-		await this.getNIs();
+	antiAddictWarning() {
+		const warning = formatAntiAddictWarning(this.playtime);
+		let toastData: ToastData = {
+			title: warning.title,
+			body: warning.body,
+			duration: this.settings.toaster.duration * 1000,
+			sound: this.settings.toaster.sound,
+			playSound: this.settings.toaster.playSound,
+			showToast: true,
+		};
+		this.serverAPI.toaster.toast(toastData);
+		return warning;
+	}
 
-		// Detect OOM
-		await this.detectOOM();
-		// Detect low battery
-		await this.detectBattery();
+	async detectAntiAddict() {
+		if (this.settings.anti_addict.enabled) {
+			if (this.playtime >= this.settings.anti_addict.threshold * 60) {
+				if (
+					this.aaLastWarnTime != 0 &&
+					this.playtime - this.aaLastWarnTime <
+						this.settings.anti_addict.interval * 60
+				) {
+					return;
+				}
+				const warning = this.antiAddictWarning();
+				this.aaLastWarnTime =
+					(Math.floor(
+						(this.playtime / 60 -
+							this.settings.anti_addict.threshold) /
+							this.settings.anti_addict.interval,
+					) *
+						this.settings.anti_addict.interval +
+						this.settings.anti_addict.threshold) *
+					60;
+
+				await this.log({
+					sender: 'AntiAddict',
+					message: warning.body,
+				});
+			}
+		}
+	}
+
+	refreshPlayTime() {
+		if (Router.RunningApps.length > 0) {
+			if (this.systemInfo.gameSessionStartTime == 0) {
+				this.systemInfo.gameSessionStartTime = Date.now() / 1000;
+				this.aaLastWarnTime = 0;
+			}
+			this.playtime =
+				Date.now() / 1000 - this.systemInfo.gameSessionStartTime;
+		}
+		if (Router.RunningApps.length == 0) {
+			this.systemInfo.gameSessionStartTime = 0;
+			this.playtime = 0;
+			this.aaLastWarnTime = 0;
+		}
+	}
+
+	async refreshStatus() {
+		await this.saveSettings();
+		this.refreshPlayTime();
+		await this.detectAntiAddict();
+
+		if (this.settings.refresh.enabled) {
+			if (this.refreshStep == 0) {
+				await this.getNIs();
+				await this.getBattery();
+				await this.getMemory();
+				await this.getTopKMemProcs();
+				// Detect OOM
+				await this.detectOOM();
+				// Detect low battery
+				await this.detectBattery();
+			}
+			this.refreshStep += 1;
+			if (this.settings.refresh.interval <= this.refreshStep) {
+				this.refreshStep = 0;
+			}
+		}
 	}
 
 	getServerAPI() {
@@ -263,10 +296,7 @@ export class Backend {
 			key,
 			default: defaultValue,
 		});
-		if (result && result !== null) {
-			return JSON.parse(result);
-		}
-		return defaultValue;
+		return result;
 	}
 
 	async setSettings(key: string, value: any) {
@@ -278,57 +308,172 @@ export class Backend {
 	}
 
 	async loadSettings() {
-		this.settings.procs_k = await this.getSettings('procs_k', 1);
+		this.settings.refresh.enabled = await this.getSettings(
+			'refresh.enabled',
+			DefaultSettings.refresh.enabled,
+		);
+		this.settings.refresh.interval = await this.getSettings(
+			'refresh.interval',
+			DefaultSettings.refresh.interval,
+		);
 
-		this.settings.oom.enabled = await this.getSettings('oom.enabled', true);
-		this.settings.oom.threshold = await this.getSettings('oom.threshold', 99.5);
-		this.settings.oom.plusSwap = await this.getSettings('oom.plusSwap', true);
-		this.settings.oom.cooldown = await this.getSettings('oom.cooldown', 600);
-		this.settings.oom.logDetails = await this.getSettings('oom.logDetails', true);
+		this.settings.procs_k = await this.getSettings(
+			'procs_k',
+			DefaultSettings.procs_k,
+		);
 
-		this.settings.battery.enabled = await this.getSettings('battery.enabled', true);
-		this.settings.battery.threshold = await this.getSettings('battery.threshold', 10);
-		this.settings.battery.step = await this.getSettings('battery.step', 5);
+		this.settings.oom.enabled = await this.getSettings(
+			'oom.enabled',
+			DefaultSettings.oom.enabled,
+		);
+		this.settings.oom.threshold = await this.getSettings(
+			'oom.threshold',
+			DefaultSettings.oom.threshold,
+		);
+		this.settings.oom.plusSwap = await this.getSettings(
+			'oom.plusSwap',
+			DefaultSettings.oom.plusSwap,
+		);
+		this.settings.oom.interval = await this.getSettings(
+			'oom.interval',
+			DefaultSettings.oom.interval,
+		);
+		this.settings.oom.logDetails = await this.getSettings(
+			'oom.logDetails',
+			DefaultSettings.oom.logDetails,
+		);
 
-		this.settings.network.enabled = await this.getSettings('network.enabled', true);
+		this.settings.battery.enabled = await this.getSettings(
+			'battery.enabled',
+			DefaultSettings.battery.enabled,
+		);
+		this.settings.battery.threshold = await this.getSettings(
+			'battery.threshold',
+			DefaultSettings.battery.threshold,
+		);
+		this.settings.battery.step = await this.getSettings(
+			'battery.step',
+			DefaultSettings.battery.step,
+		);
 
-		this.settings.toaster.duration = await this.getSettings('toaster.duration', 5);
-		this.settings.toaster.sound = await this.getSettings('toaster.sound', 6);
-		this.settings.toaster.playSound = await this.getSettings('toaster.playSound', true);
+		this.settings.network.enabled = await this.getSettings(
+			'network.enabled',
+			DefaultSettings.network.enabled,
+		);
 
-		this.settings.debug.frontend = await this.getSettings('debug.frontend', true);
-		this.settings.debug.backend = await this.getSettings('debug.backend', true);
+		this.settings.toaster.duration = await this.getSettings(
+			'toaster.duration',
+			DefaultSettings.toaster.duration,
+		);
+		this.settings.toaster.sound = await this.getSettings(
+			'toaster.sound',
+			DefaultSettings.toaster.sound,
+		);
+		this.settings.toaster.playSound = await this.getSettings(
+			'toaster.playSound',
+			DefaultSettings.toaster.playSound,
+		);
+
+		this.settings.anti_addict.enabled = await this.getSettings(
+			'anti_addict.enabled',
+			DefaultSettings.anti_addict.enabled,
+		);
+		this.settings.anti_addict.threshold = await this.getSettings(
+			'anti_addict.threshold',
+			DefaultSettings.anti_addict.threshold,
+		);
+		this.settings.anti_addict.interval = await this.getSettings(
+			'anti_addict.interval',
+			DefaultSettings.anti_addict.interval,
+		);
+
+		this.settings.debug.frontend = await this.getSettings(
+			'debug.frontend',
+			DefaultSettings.debug.frontend,
+		);
+		this.settings.debug.backend = await this.getSettings(
+			'debug.backend',
+			DefaultSettings.debug.backend,
+		);
 	}
 
 	async _saveSettings() {
+		await this.setSettings(
+			'refresh.enabled',
+			this.settings.refresh.enabled,
+		);
+		await this.setSettings(
+			'refresh.interval',
+			this.settings.refresh.interval,
+		);
+
 		await this.setSettings('procs_k', this.settings.procs_k);
 
 		await this.setSettings('oom.enabled', this.settings.oom.enabled);
 		await this.setSettings('oom.threshold', this.settings.oom.threshold);
 		await this.setSettings('oom.plusSwap', this.settings.oom.plusSwap);
-		await this.setSettings('oom.cooldown', this.settings.oom.cooldown);
+		await this.setSettings('oom.interval', this.settings.oom.interval);
 		await this.setSettings('oom.logDetails', this.settings.oom.logDetails);
 
-		await this.setSettings('battery.enabled', this.settings.battery.enabled);
-		await this.setSettings('battery.threshold', this.settings.battery.threshold);
+		await this.setSettings(
+			'battery.enabled',
+			this.settings.battery.enabled,
+		);
+		await this.setSettings(
+			'battery.threshold',
+			this.settings.battery.threshold,
+		);
 		await this.setSettings('battery.step', this.settings.battery.step);
 
-		await this.setSettings('network.enabled', this.settings.network.enabled);
+		await this.setSettings(
+			'network.enabled',
+			this.settings.network.enabled,
+		);
 
-		await this.setSettings('toaster.duration', this.settings.toaster.duration);
+		await this.setSettings(
+			'toaster.duration',
+			this.settings.toaster.duration,
+		);
 		await this.setSettings('toaster.sound', this.settings.toaster.sound);
-		await this.setSettings('toaster.playSound', this.settings.toaster.playSound);
+		await this.setSettings(
+			'toaster.playSound',
+			this.settings.toaster.playSound,
+		);
+
+		await this.setSettings(
+			'anti_addict.enabled',
+			this.settings.anti_addict.enabled,
+		);
+		await this.setSettings(
+			'anti_addict.threshold',
+			this.settings.anti_addict.threshold,
+		);
+		await this.setSettings(
+			'anti_addict.interval',
+			this.settings.anti_addict.interval,
+		);
 
 		await this.setSettings('debug.frontend', this.settings.debug.frontend);
 		await this.setSettings('debug.backend', this.settings.debug.backend);
 		await this.commitSettings();
 	}
 
+	async queueForSaveSettings() {
+		// Record current time
+		this.queueForSaveTime = Date.now();
+	}
+
 	async saveSettings() {
-		if (this.saveTimerRef) clearTimeout(this.saveTimerRef)
-		this.saveTimerRef = setTimeout(async () => {
-			await this._saveSettings();
-		}, 1000)
+		// Check if queueForSaveTime is null
+		if (this.queueForSaveTime == null) {
+			return;
+		}
+		// Check if current time is after certain interval
+		if (Date.now() - this.queueForSaveTime < 500) {
+			return;
+		}
+		await this._saveSettings();
+		this.queueForSaveTime = null;
 	}
 
 	async bridge(functionName: string, namedArgs?: any) {
@@ -353,18 +498,35 @@ export class Backend {
 			if (payload.code == 0) {
 				return payload.data;
 			}
-			const errMessage = `${functionName} return fail: ${ret}`;
+			const errMessage = `${functionName} return fail: ${JSON.stringify(
+				ret,
+			)}`;
 			await this.logError({ sender: 'bridge', message: errMessage });
 		}
-		const errMessage = `${functionName} fail: ${ret}`;
+		const errMessage = `${functionName} fail: ${JSON.stringify(ret)}`;
 		await this.logError({ sender: 'bridge', message: errMessage });
 		return null;
 	}
 
+	setupSuspendResumeHandler() {
+		const { unregister: unregisterOnResumeFromSuspend } =
+			SteamClient.System.RegisterForOnResumeFromSuspend(() => {
+				if (Router.RunningApps.length > 0) {
+					this.systemInfo.gameSessionStartTime = Date.now() / 1000;
+					this.aaLastWarnTime = 0;
+				}
+			});
+
+		return () => {
+			unregisterOnResumeFromSuspend();
+		};
+	}
+
 	onDismount() {
-		if (this.cooldownTimerRef) {
-			clearInterval(this.cooldownTimerRef);
-			this.oomWarnCooldown = true;
+		this.unregisterHandlers.forEach((unregister) => unregister());
+		if (this.oomIntervalTimerRef) {
+			clearInterval(this.oomIntervalTimerRef);
+			this.oomWarnInterval = true;
 		}
 	}
 }

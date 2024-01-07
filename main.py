@@ -32,7 +32,8 @@ class Plugin:
                 shell=True,
             ).decode()
             await Plugin.log_py(self, f"stdout capture: {out}")
-            payload = {"code": 0, "data": out}
+            json_out = json.loads(out)
+            payload = {"code": 0, "data": json.dumps(json_out["result"])}
             await Plugin.log_py(self, f"return payload: {payload}")
             return payload
         except:
@@ -48,8 +49,8 @@ class Plugin:
     async def get_top_k_mem_procs(self, k=1):
         return await Plugin.cli(self, "get-top-k-mem-procs", f"--k={k}")
 
-    async def get_uptime(self):
-        return await Plugin.cli(self, "get-uptime")
+    async def get_boottime(self):
+        return await Plugin.cli(self, "get-boottime")
 
     async def get_battery(self):
         return await Plugin.cli(self, "get-battery")

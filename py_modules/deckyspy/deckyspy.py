@@ -5,7 +5,6 @@ import time
 from typing import Dict
 
 import psutil
-from dateutil import parser
 
 af_map = {
     socket.AF_INET: "IPv4",
@@ -20,16 +19,19 @@ class DeckySpy:
         vmem = psutil.virtual_memory()
         swap = psutil.swap_memory()
         return {
-            "vmem": {
-                "total": vmem.total,
-                "used": vmem.used,
-                "percent": vmem.percent,
+            "result": {
+                "vmem": {
+                    "total": vmem.total,
+                    "used": vmem.used,
+                    "percent": vmem.percent,
+                },
+                "swap": {
+                    "total": swap.total,
+                    "used": swap.used,
+                    "percent": swap.percent,
+                },
             },
-            "swap": {
-                "total": swap.total,
-                "used": swap.used,
-                "percent": swap.percent,
-            },
+            "debug": "",
         }
 
     @staticmethod
@@ -46,45 +48,11 @@ class DeckySpy:
             for p in psutil.process_iter(["name", "memory_info"])
         }
         top = sorted(procs.values(), key=lambda x: x["mem"]["rss"], reverse=True)[:k]
-        return top
+        return {"result": top, "debug": ""}
 
     @staticmethod
-    def get_uptime() -> float:
-        uptime = time.time() - psutil.boot_time()
-        return uptime
-
-    @staticmethod
-    def get_uptime_since_powerup() -> float:
-        # Retrieve the last 1000 logs from systemd-logind
-        cmd = "journalctl -b -u systemd-logind -n 1000"
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        log = result.stdout
-
-        current_time = datetime.datetime.now()
-        current_year = current_time.year
-        previous_year = current_year - 1
-
-        # Look for the last boot or wake event
-        for line in reversed(log.splitlines()):
-            if (
-                "Operation 'sleep' finished" in line
-                or "Starting User Login Management" in line
-            ):
-                try:
-                    # Extract and parse the date and time
-                    date_time_str = " ".join(line.split()[:3])
-                    event_time = parser.parse(date_time_str, fuzzy=True)
-
-                    # Adjust the year if necessary
-                    if event_time.month == 12 and current_time.month == 1:
-                        event_time = event_time.replace(year=previous_year)
-
-                    uptime = current_time - event_time
-                    return uptime.total_seconds()
-                except ValueError:
-                    continue
-
-        return 0
+    def get_boottime() -> float:
+        return {"result": psutil.boot_time(), "debug": ""}
 
     @staticmethod
     def get_battery() -> Dict[str, int | float]:
@@ -97,10 +65,13 @@ class DeckySpy:
                 "plugged": True,
             }
         return {
-            "battery": True,
-            "percent": battery.percent,
-            "secsleft": battery.secsleft,
-            "plugged": battery.power_plugged,
+            "result": {
+                "battery": True,
+                "percent": battery.percent,
+                "secsleft": battery.secsleft,
+                "plugged": battery.power_plugged,
+            },
+            "debug": "",
         }
 
     @staticmethod
@@ -119,4 +90,4 @@ class DeckySpy:
                     }
                 )
             interfaces_info.append(interface_info)
-        return interfaces_info
+        return {"result": interfaces_info, "debug": ""}

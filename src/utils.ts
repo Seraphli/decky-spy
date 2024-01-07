@@ -29,13 +29,33 @@ export function formatBatteryWarning(systemInfo: SystemInfo) {
 	const batteryWarning = { ...BatteryWarningTemplate };
 	batteryWarning.title = batteryWarning.title.replace(
 		'{#0}',
-		systemInfo.battery.percent && !isNaN(systemInfo.battery.percent) ? systemInfo.battery.percent.toFixed(2).toString() : '0',
+		systemInfo.battery.percent && !isNaN(systemInfo.battery.percent)
+			? systemInfo.battery.percent.toFixed(2).toString()
+			: '0',
 	);
 	batteryWarning.body = batteryWarning.body.replace(
 		'{#1}',
-		systemInfo.battery.plugged ? "Plugged" : `Time left: ${convertSecondsToHumanReadable(systemInfo.battery.secsleft)}`,
+		systemInfo.battery.plugged
+			? 'Plugged'
+			: `Time left: ${convertSecondsToHumanReadable(
+					systemInfo.battery.secsleft,
+			  )}`,
 	);
 	return batteryWarning;
+}
+
+export const AntiAddictWarningTemplate = {
+	title: 'Take a Break?',
+	body: 'Played {#0} mins. Stretch & rest!',
+};
+
+export function formatAntiAddictWarning(playtime: number) {
+	const antiAddictWarning = { ...AntiAddictWarningTemplate };
+	antiAddictWarning.body = antiAddictWarning.body.replace(
+		'{#0}',
+		convertSecondsToHumanReadable(playtime, 1),
+	);
+	return antiAddictWarning;
 }
 
 export function convertBytesToHumanReadable(bytes: number) {
@@ -52,7 +72,10 @@ export function convertBytesToHumanReadable(bytes: number) {
 	return '0 B';
 }
 
-export function convertSecondsToHumanReadable(seconds: number) {
+export function convertSecondsToHumanReadable(
+	seconds: number,
+	ignore: number = 0,
+) {
 	// If longer than 24 hours, display in days
 	if (seconds > 86400) {
 		const days = Math.floor(seconds / 86400);
@@ -60,11 +83,39 @@ export function convertSecondsToHumanReadable(seconds: number) {
 		const minutes = Math.floor(((seconds % 86400) % 3600) / 60);
 		const secs = Math.floor(((seconds % 86400) % 3600) % 60);
 		// Display two decimal, padding with 0
-		return `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+		if (ignore === 0) {
+			return `${days}d {hours.toString().padStart(2, '0')}:${minutes
+				.toString()
+				.padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+		} else if (ignore === 1) {
+			return `${days}d {hours.toString().padStart(2, '0')}:${minutes
+				.toString()
+				.padStart(2, '0')}`;
+		} else if (ignore === 2) {
+			return `${days}d {hours.toString().padStart(2, '0')}`;
+		} else if (ignore === 3) {
+			return `${days}d`;
+		}
+		return `${days}d ${hours.toString().padStart(2, '0')}:${minutes
+			.toString()
+			.padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 	}
 	const hours = Math.floor(seconds / 3600);
 	const minutes = Math.floor((seconds % 3600) / 60);
 	const secs = Math.floor((seconds % 3600) % 60);
 	// Display two decimal, padding with 0
-	return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+	if (ignore === 0) {
+		return `${hours.toString().padStart(2, '0')}:${minutes
+			.toString()
+			.padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+	} else if (ignore === 1) {
+		return `${hours.toString().padStart(2, '0')}:${minutes
+			.toString()
+			.padStart(2, '0')}`;
+	} else if (ignore === 2) {
+		return `${hours.toString().padStart(2, '0')}`;
+	}
+	return `${hours.toString().padStart(2, '0')}:${minutes
+		.toString()
+		.padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }

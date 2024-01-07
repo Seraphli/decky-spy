@@ -10,48 +10,41 @@ import {
 	Field,
 } from 'decky-frontend-lib';
 import { VFC } from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FaWatchmanMonitoring } from 'react-icons/fa';
 import { Backend } from './backend';
-import {
-	BatteryInfo,
-	MemoryInfo,
-	ProcsInfo,
-	NetInterfaceInfo,
-} from './interfaces';
+import { SystemInfo, DefaultSystemInfo, Settings } from './interfaces';
 import {
 	convertBytesToHumanReadable,
 	convertSecondsToHumanReadable,
 } from './utils';
 
-let pollTimerRef: NodeJS.Timeout | undefined;
 let backendPollTimerRef: NodeJS.Timeout | undefined;
 
 const Content: VFC<{ backend: Backend }> = ({ backend }) => {
-	const [memory, setMemory] = useState<MemoryInfo | undefined>();
-	const [uptime, setUptime] = useState<number | undefined>();
-	const [battery, setBattery] = useState<BatteryInfo | undefined>();
-	const [procs, setProcs] = useState<ProcsInfo[] | undefined>();
-	const [netInterfaces, setNetInterfaces] = useState<
-		NetInterfaceInfo[] | undefined
-	>();
+	const [uptime, setUptime] = useState<{ uptime: number; playtime: number }>({
+		uptime: 0,
+		playtime: 0,
+	});
+	const [systemInfo, setSystemInfo] = useState<SystemInfo>(DefaultSystemInfo);
+	const [settings, setSettings] = useState<Settings>(backend.settings);
+	const pollTimerRef = useRef<NodeJS.Timeout>();
 
 	const refreshStatus = async () => {
-		backend.systemInfo.memory && setMemory(backend.systemInfo.memory);
-		backend.systemInfo.uptime && setUptime(backend.systemInfo.uptime);
-		backend.systemInfo.battery && setBattery(backend.systemInfo.battery);
-		backend.systemInfo.topKMemProcs &&
-			setProcs(backend.systemInfo.topKMemProcs);
-		backend.systemInfo.nis && setNetInterfaces(backend.systemInfo.nis);
+		setSystemInfo({ ...backend.systemInfo });
+		setUptime({
+			uptime: Date.now() / 1000 - systemInfo.boottime,
+			playtime: backend.playtime,
+		});
 	};
 	useEffect(() => {
-		pollTimerRef = setInterval(async () => {
+		pollTimerRef.current = setInterval(async () => {
 			await refreshStatus();
-		}, 1000);
+		}, 500);
 
 		return () => {
 			if (pollTimerRef) {
-				clearInterval(pollTimerRef);
+				clearInterval(pollTimerRef.current);
 			}
 		};
 	}, []);
@@ -59,37 +52,92 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 	return (
 		<div>
 			<PanelSection title="System Info">
-				<PanelSectionRow>
-					<Field
-						focusable={true}
-						childrenLayout="below"
-						childrenContainerWidth="max"
-					>
+				<ToggleField
+					label="Refresh Enabled"
+					checked={settings.refresh.enabled}
+					onChange={(value) => {
+						setSettings({
+							...settings,
+							refresh: { ...settings.refresh, enabled: value },
+						});
+						backend.settings.refresh.enabled = value;
+						backend.queueForSaveSettings();
+					}}
+				/>
+				<SliderField
+					label="Refresh Interval (seconds)"
+					value={settings.refresh.interval}
+					min={1}
+					max={60}
+					step={1}
+					showValue={true}
+					onChange={(value) => {
+						setSettings({
+							...settings,
+							refresh: { ...settings.refresh, interval: value },
+						});
+						backend.settings.refresh.interval = value;
+						backend.queueForSaveSettings();
+					}}
+				/>
+				<Field
+					focusable={true}
+					childrenLayout="below"
+					childrenContainerWidth="max"
+				>
+					<div>
 						Uptime:{' '}
-						{uptime && convertSecondsToHumanReadable(uptime)}
-						<br />
+						{uptime && convertSecondsToHumanReadable(uptime.uptime)}
+					</div>
+					<div>
+						Play Time:{' '}
+						{uptime &&
+							convertSecondsToHumanReadable(uptime.playtime)}
+					</div>
+					<div>
 						Mem:{' '}
-						{memory &&
+						{systemInfo.memory &&
 							`${convertBytesToHumanReadable(
-								memory.vmem.used,
+								systemInfo.memory.vmem.used,
 							)}/${convertBytesToHumanReadable(
-								memory.vmem.total,
-							)}(${memory.vmem.percent}%)`}
-						<br />
+								systemInfo.memory.vmem.total,
+							)}(${systemInfo.memory.vmem.percent}%)`}
+					</div>
+					<div>
 						Swap:{' '}
-						{memory &&
+						{systemInfo.memory &&
 							`${convertBytesToHumanReadable(
-								memory.swap.used,
+								systemInfo.memory.swap.used,
 							)}/${convertBytesToHumanReadable(
-								memory.swap.total,
-							)}(${memory.swap.percent}%)`}
-						<br />
-						Battery: {battery && `${battery.percent.toFixed(2)}%`}
-					</Field>
-				</PanelSectionRow>
+								systemInfo.memory.swap.total,
+							)}(${systemInfo.memory.swap.percent}%)`}
+					</div>
+					<div>
+						Battery:{' '}
+						{systemInfo.battery &&
+							`${systemInfo.battery.percent.toFixed(2)}%`}
+					</div>
+				</Field>
 			</PanelSection>
 			<PanelSection title="Process Info">
-				{procs?.map((proc, index) => (
+				<SliderField
+					label="Num of Process"
+					description="How many processes displayed"
+					value={settings.procs_k}
+					min={1}
+					max={5}
+					step={1}
+					showValue={true}
+					onChange={(value) => {
+						setSettings({
+							...settings,
+							procs_k: value,
+						});
+						backend.settings.procs_k = value;
+						backend.queueForSaveSettings();
+					}}
+				/>
+				{systemInfo.topKMemProcs?.map((proc, index) => (
 					<PanelSectionRow key={index}>
 						<Field
 							label={`[ ${index + 1} ]`}
@@ -109,14 +157,18 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 			<PanelSection title="Network Info">
 				<ToggleField
 					label="Show Network Info"
-					checked={backend.settings.network.enabled}
+					checked={settings.network.enabled}
 					onChange={(value) => {
+						setSettings({
+							...settings,
+							network: { ...settings.network, enabled: value },
+						});
 						backend.settings.network.enabled = value;
-						backend.saveSettings();
+						backend.queueForSaveSettings();
 					}}
 				/>
-				{backend.settings.network.enabled &&
-					netInterfaces?.map((ni, index) => (
+				{settings.network.enabled &&
+					systemInfo.nis?.map((ni, index) => (
 						<PanelSectionRow key={index}>
 							<Field
 								label={`[ ${ni.name} ]`}
@@ -142,26 +194,6 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 			</PanelSection>
 			<PanelSection title="Configuration">
 				<Field
-					label="Process Info"
-					focusable={false}
-					highlightOnFocus={false}
-					childrenLayout="below"
-				>
-					<SliderField
-						label="Num of Process"
-						description="How many processes displayed"
-						value={backend.settings.procs_k}
-						min={1}
-						max={5}
-						step={1}
-						showValue={true}
-						onChange={(value) => {
-							backend.settings.procs_k = value;
-							backend.saveSettings();
-						}}
-					/>
-				</Field>
-				<Field
 					label="Out of Memory"
 					focusable={false}
 					highlightOnFocus={false}
@@ -170,54 +202,74 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 					<ToggleField
 						label="OOM Warning"
 						description="Enable OutOfMemory warning"
-						checked={backend.settings.oom.enabled}
+						checked={settings.oom.enabled}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								oom: { ...settings.oom, enabled: value },
+							});
 							backend.settings.oom.enabled = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<SliderField
 						label="Threshold"
 						description="OOM threshold"
-						value={backend.settings.oom.threshold}
+						value={settings.oom.threshold}
 						min={50}
 						max={100}
 						step={0.2}
 						showValue={true}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								oom: { ...settings.oom, threshold: value },
+							});
 							backend.settings.oom.threshold = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<ToggleField
 						label="Plus Swap"
 						description="Include swap"
-						checked={backend.settings.oom.plusSwap}
+						checked={settings.oom.plusSwap}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								oom: { ...settings.oom, plusSwap: value },
+							});
 							backend.settings.oom.plusSwap = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<SliderField
-						label="Cooldown"
-						description="Cooldown of warning"
-						value={backend.settings.oom.cooldown}
-						min={30}
-						max={600}
-						step={10}
+						label="Interval"
+						description="Interval of warning (minutes)"
+						value={settings.oom.interval}
+						min={1}
+						max={60}
+						step={1}
 						showValue={true}
 						onChange={(value) => {
-							backend.settings.oom.cooldown = value;
-							backend.saveSettings();
+							setSettings({
+								...settings,
+								oom: { ...settings.oom, interval: value },
+							});
+							backend.settings.oom.interval = value;
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<ToggleField
 						label="Log Details"
 						description="Log details of OOM"
-						checked={backend.settings.oom.logDetails}
+						checked={settings.oom.logDetails}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								oom: { ...settings.oom, logDetails: value },
+							});
 							backend.settings.oom.logDetails = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 				</Field>
@@ -230,36 +282,120 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 					<ToggleField
 						label="Low Battery Warning"
 						description="Enable low battery warning"
-						checked={backend.settings.battery.enabled}
+						checked={settings.battery.enabled}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								battery: {
+									...settings.battery,
+									enabled: value,
+								},
+							});
 							backend.settings.battery.enabled = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<SliderField
 						label="Threshold"
 						description="Low battery threshold"
-						value={backend.settings.battery.threshold}
+						value={settings.battery.threshold}
 						min={5}
 						max={50}
 						step={1}
 						showValue={true}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								battery: {
+									...settings.battery,
+									threshold: value,
+								},
+							});
 							backend.settings.battery.threshold = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<SliderField
 						label="Step"
 						description="Step of warning after passing threshold"
-						value={backend.settings.battery.step}
+						value={settings.battery.step}
 						min={1}
 						max={10}
 						step={1}
 						showValue={true}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								battery: {
+									...settings.battery,
+									step: value,
+								},
+							});
 							backend.settings.battery.step = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
+						}}
+					/>
+				</Field>
+				<Field
+					label="Anti-Addiction"
+					focusable={false}
+					highlightOnFocus={false}
+					childrenLayout="below"
+				>
+					<ToggleField
+						label="Enable Warning"
+						description="Enable anti-addiction warning"
+						checked={settings.anti_addict.enabled}
+						onChange={(value) => {
+							setSettings({
+								...settings,
+								anti_addict: {
+									...settings.anti_addict,
+									enabled: value,
+								},
+							});
+							backend.settings.anti_addict.enabled = value;
+							backend.queueForSaveSettings();
+						}}
+					/>
+					<SliderField
+						label="Threshold"
+						description="Anti-addiction threshold (minutes)"
+						value={settings.anti_addict.threshold}
+						min={1}
+						max={720}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							setSettings({
+								...settings,
+								anti_addict: {
+									...settings.anti_addict,
+									threshold: value,
+								},
+							});
+							backend.settings.anti_addict.threshold = value;
+							backend.queueForSaveSettings();
+						}}
+					/>
+					<SliderField
+						label="Interval"
+						description="Interval of warning (minutes)"
+						value={settings.anti_addict.interval}
+						min={1}
+						max={120}
+						step={1}
+						showValue={true}
+						onChange={(value) => {
+							setSettings({
+								...settings,
+								anti_addict: {
+									...settings.anti_addict,
+									interval: value,
+								},
+							});
+							backend.settings.anti_addict.interval = value;
+							backend.queueForSaveSettings();
 						}}
 					/>
 				</Field>
@@ -272,36 +408,57 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 					<SliderField
 						label="Duration"
 						description="Duration of warning toaster"
-						value={backend.settings.toaster.duration}
+						value={settings.toaster.duration}
 						min={3}
 						max={10}
 						step={1}
 						showValue={true}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								toaster: {
+									...settings.toaster,
+									duration: value,
+								},
+							});
 							backend.settings.toaster.duration = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<SliderField
 						label="Sound"
 						description="Sound of toaster"
-						value={backend.settings.toaster.sound}
+						value={settings.toaster.sound}
 						min={0}
 						max={20}
 						step={1}
 						showValue={true}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								toaster: {
+									...settings.toaster,
+									sound: value,
+								},
+							});
 							backend.settings.toaster.sound = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<ToggleField
 						label="Play Sound"
 						description="Play sound of toaster"
-						checked={backend.settings.toaster.playSound}
+						checked={settings.toaster.playSound}
 						onChange={(value) => {
+							setSettings({
+								...settings,
+								toaster: {
+									...settings.toaster,
+									playSound: value,
+								},
+							});
 							backend.settings.toaster.playSound = value;
-							backend.saveSettings();
+							backend.queueForSaveSettings();
 						}}
 					/>
 					<ButtonItem
@@ -320,29 +477,54 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
 					>
 						Test Battery Warning
 					</ButtonItem>
+					<ButtonItem
+						layout="below"
+						onClick={() => {
+							backend.antiAddictWarning();
+						}}
+					>
+						Test Anti-Addiction Warning
+					</ButtonItem>
 				</Field>
 			</PanelSection>
 			<PanelSection title="Debug Info">
 				<Field label="Version" focusable={true}>
 					{backend.systemInfo.version}
 				</Field>
+				<Field
+					label="Debug Info"
+					focusable={true}
+					childrenLayout="below"
+					childrenContainerWidth="max"
+				>
+					{backend.debugInfo.map((info, index) => (
+						<div key={index}>{info}</div>
+					))}
+				</Field>
 				<ToggleField
 					label="Frontend"
 					description="Enable Frontend debug"
-					checked={backend.settings.debug.frontend}
+					checked={settings.debug.frontend}
 					onChange={(value) => {
+						setSettings({
+							...settings,
+							debug: { ...settings.debug, frontend: value },
+						});
 						backend.settings.debug.frontend = value;
-						backend.saveSettings();
+						backend.queueForSaveSettings();
 					}}
 				/>
-
 				<ToggleField
 					label="Backend"
 					description="Enable Backend debug"
-					checked={backend.settings.debug.backend}
+					checked={settings.debug.backend}
 					onChange={(value) => {
+						setSettings({
+							...settings,
+							debug: { ...settings.debug, backend: value },
+						});
 						backend.settings.debug.backend = value;
-						backend.saveSettings();
+						backend.queueForSaveSettings();
 					}}
 				/>
 			</PanelSection>
@@ -357,12 +539,11 @@ export default definePlugin((serverAPI: ServerAPI) => {
 	if (backendPollTimerRef) {
 		clearInterval(backendPollTimerRef);
 	}
-	setTimeout(async () => {
-		await backend.setup();
+	backend.setup().then(() => {
 		backendPollTimerRef = setInterval(async () => {
 			await backend.refreshStatus();
-		}, 2000);
-	}, 100);
+		}, 1000);
+	});
 
 	return {
 		title: <div className={staticClasses.Title}>Decky Spy</div>,

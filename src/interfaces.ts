@@ -55,19 +55,49 @@ export interface SystemInfo {
 	version: string;
 	memory: MemoryInfo;
 	topKMemProcs: ProcsInfo[];
-	uptime: number;
+	boottime: number;
+	gameSessionStartTime: number;
 	battery: BatteryInfo;
 	nis: NetInterfaceInfo[];
 }
+export const DefaultSystemInfo: SystemInfo = {
+	version: '0.0.0',
+	memory: {
+		vmem: {
+			used: 0,
+			total: 0,
+			percent: 0,
+		},
+		swap: {
+			used: 0,
+			total: 0,
+			percent: 0,
+		},
+	},
+	topKMemProcs: [],
+	boottime: 0,
+	gameSessionStartTime: 0,
+	battery: {
+		battery: false,
+		percent: 0,
+		secsleft: 0,
+		plugged: true,
+	},
+	nis: [],
+};
 
 export interface Settings {
+	refresh: {
+		enabled: boolean;
+		interval: number; // in seconds
+	};
 	procs_k: number;
 	oom: {
 		enabled: boolean;
 		threshold: number;
 		plusSwap: boolean;
 		logDetails: boolean;
-		cooldown: number;
+		interval: number; // in minutes
 	};
 	battery: {
 		enabled: boolean;
@@ -78,14 +108,124 @@ export interface Settings {
 		enabled: boolean;
 	};
 	toaster: {
-		duration: number;
+		duration: number; // in seconds
 		sound: number;
 		playSound: boolean;
+	};
+	anti_addict: {
+		enabled: boolean;
+		threshold: number; // in minutes
+		interval: number; // in minutes
 	};
 	debug: {
 		frontend: boolean;
 		backend: boolean;
 	};
 }
+export const DefaultSettings: Settings = {
+	refresh: {
+		enabled: true,
+		interval: 5,
+	},
+	procs_k: 1,
+	oom: {
+		enabled: true,
+		threshold: 99,
+		plusSwap: false,
+		interval: 5,
+		logDetails: true,
+	},
+	battery: {
+		enabled: true,
+		threshold: 30,
+		step: 5,
+	},
+	network: {
+		enabled: true,
+	},
+	toaster: {
+		duration: 5,
+		sound: 8,
+		playSound: true,
+	},
+	anti_addict: {
+		enabled: false,
+		threshold: 60,
+		interval: 15,
+	},
+	debug: {
+		frontend: false,
+		backend: false,
+	},
+};
 
-export interface BackendReturn { code: number, data: any }
+export interface BackendReturn {
+	code: number;
+	data: any;
+}
+
+// From https://github.com/popsUlfr/SDH-PauseGames.git
+// SteamClient Doc https://github.com/SteamDeckHomebrew/decky-frontend-lib/pull/92
+
+/**
+ * @prop unAppID is not properly set by Steam for non-steam game shortcuts, so it defaults to 0 for them
+ */
+export interface AppLifetimeNotification {
+	unAppID: number;
+	nInstanceID: number;
+	bRunning: boolean;
+}
+
+export interface Unregisterable {
+	/**
+	 * Unregister the callback.
+	 */
+	unregister(): void;
+}
+
+// only the needed subset of the SteamClient
+export interface SteamClient {
+	GameSessions: {
+		/**
+		 * Registers a callback function to be called when an app lifetime notification is received.
+		 * @param {function} callback - The callback function to be called.
+		 * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
+		 */
+		RegisterForAppLifetimeNotifications(
+			callback: (
+				appLifetimeNotification: AppLifetimeNotification,
+			) => void,
+		): Unregisterable | any;
+	};
+	Apps: {
+		/**
+		 * Registers a callback function to be called when a game action starts.
+		 * @param {function} callback - The callback function to be called.
+		 * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
+		 */
+		RegisterForGameActionStart(
+			callback: (
+				gameActionIdentifier: number,
+				appId: string,
+				action: string,
+				param3: number,
+			) => void,
+		): Unregisterable | any;
+		/**
+		 * Registers a callback function to be called when a game action ends.
+		 * @param {function} callback - The callback function to be called.
+		 * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
+		 */
+		RegisterForGameActionEnd(
+			callback: (gameActionIdentifier: number) => void,
+		): Unregisterable | any;
+	};
+	System: {
+		RegisterForOnSuspendRequest: (cb: () => Promise<any> | void) => {
+			unregister: () => void;
+		};
+		RegisterForOnResumeFromSuspend: (cb: () => Promise<any> | void) => {
+			unregister: () => void;
+		};
+	};
+}
