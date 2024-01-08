@@ -27,6 +27,7 @@ export class Backend {
 	public oomWarnInterval = true;
 	public batteryWarnStep = 0;
 	public playtime: number = 0; // in seconds
+	public lastPlaytime: number = 0; // in seconds
 	public debugInfo: string[] = [];
 	private oomIntervalTimerRef: NodeJS.Timeout | null = null;
 	private aaLastWarnTime: number = 0;
@@ -201,6 +202,9 @@ export class Backend {
 
 	async detectAntiAddict() {
 		if (this.settings.anti_addict.enabled) {
+			if (this.playtime - this.lastPlaytime > 2) {
+				return;
+			}
 			if (this.playtime >= this.settings.anti_addict.threshold * 60) {
 				if (
 					this.aaLastWarnTime != 0 &&
@@ -234,11 +238,13 @@ export class Backend {
 				this.systemInfo.gameSessionStartTime = Date.now() / 1000;
 				this.aaLastWarnTime = 0;
 			}
+			this.lastPlaytime = this.playtime;
 			this.playtime =
 				Date.now() / 1000 - this.systemInfo.gameSessionStartTime;
 		}
 		if (Router.RunningApps.length == 0) {
 			this.systemInfo.gameSessionStartTime = 0;
+			this.lastPlaytime = 0;
 			this.playtime = 0;
 			this.aaLastWarnTime = 0;
 		}
