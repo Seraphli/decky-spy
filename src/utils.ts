@@ -84,15 +84,15 @@ export function convertSecondsToHumanReadable(
 		const secs = Math.floor(((seconds % 86400) % 3600) % 60);
 		// Display two decimal, padding with 0
 		if (ignore === 0) {
-			return `${days}d {hours.toString().padStart(2, '0')}:${minutes
+			return `${days}d ${hours.toString().padStart(2, '0')}:${minutes
 				.toString()
 				.padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 		} else if (ignore === 1) {
-			return `${days}d {hours.toString().padStart(2, '0')}:${minutes
+			return `${days}d ${hours.toString().padStart(2, '0')}:${minutes
 				.toString()
 				.padStart(2, '0')}`;
 		} else if (ignore === 2) {
-			return `${days}d {hours.toString().padStart(2, '0')}`;
+			return `${days}d ${hours.toString().padStart(2, '0')}`;
 		} else if (ignore === 3) {
 			return `${days}d`;
 		}
