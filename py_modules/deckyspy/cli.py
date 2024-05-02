@@ -10,6 +10,12 @@ def cli():
 
 
 @cli.command()
+def get_cpu():
+    out = json.dumps(DeckySpy.get_cpu())
+    print(out)
+
+
+@cli.command()
 def get_memory():
     out = json.dumps(DeckySpy.get_memory())
     print(out)

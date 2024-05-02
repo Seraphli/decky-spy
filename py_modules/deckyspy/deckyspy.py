@@ -15,6 +15,11 @@ af_map = {
 
 class DeckySpy:
     @staticmethod
+    def get_cpu():
+        cpu = psutil.cpu_percent(interval=1)
+        return {"result": cpu, "debug": ""}
+
+    @staticmethod
     def get_memory():
         vmem = psutil.virtual_memory()
         swap = psutil.swap_memory()
@@ -59,10 +64,13 @@ class DeckySpy:
         battery = psutil.sensors_battery()
         if battery is None:
             return {
-                "battery": False,
-                "percent": -1,
-                "secsleft": -1,
-                "plugged": True,
+                "result": {
+                    "battery": False,
+                    "percent": -1,
+                    "secsleft": -1,
+                    "plugged": True,
+                },
+                "debug": "",
             }
         return {
             "result": {

@@ -27,7 +27,7 @@ class Plugin:
         await Plugin.log_py(self, f"cli call: {command} {args}")
         try:
             out = subprocess.check_output(
-                f"{VENV_PYTHON} '{os.path.dirname(__file__)}/deckyspy/cli.py' {command} {args}",
+                f"{VENV_PYTHON} '{os.path.dirname(__file__)}/py_modules/deckyspy/cli.py' {command} {args}",
                 stderr=subprocess.STDOUT,
                 shell=True,
             ).decode()
@@ -42,6 +42,9 @@ class Plugin:
             payload = {"code": 1, "data": except_info}
             await Plugin.log_py(self, f"return payload: {payload}")
             return payload
+
+    async def get_cpu(self):
+        return await Plugin.cli(self, "get-cpu")
 
     async def get_memory(self):
         return await Plugin.cli(self, "get-memory")

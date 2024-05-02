@@ -53,6 +53,7 @@ export interface NetInterfaceInfo {
 
 export interface SystemInfo {
 	version: string;
+	cpu: number;
 	memory: MemoryInfo;
 	topKMemProcs: ProcsInfo[];
 	boottime: number;
@@ -62,6 +63,7 @@ export interface SystemInfo {
 }
 export const DefaultSystemInfo: SystemInfo = {
 	version: '0.0.0',
+	cpu: 0,
 	memory: {
 		vmem: {
 			used: 0,

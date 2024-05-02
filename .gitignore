@@ -55,4 +55,4 @@ out/*
 cli/
 cli/*
 cli/decky
-defaults/deckyspy
+deck.json
