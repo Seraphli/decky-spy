@@ -76,6 +76,26 @@
             // },
             "problemMatcher": []
         },
+        //BUILD PYTHON TASKS
+        {
+            "label": "py-build",
+            "group": "build",
+            "detail": "Build python cli with docker",
+            "options": {
+                "cwd": "${workspaceFolder}/py_build/"
+            },
+            "linux": {
+                "command": "${workspaceFolder}/py_build/build_py.sh",
+            },
+            "osx": {
+                "command": "${workspaceFolder}/py_build/build_py.sh",
+            },
+            // // placeholder for windows logic, not currently planned
+            // "windows": {
+            //     "command": "call ${workspaceFolder}\\.vscode\\build.bat",
+            // },
+            "problemMatcher": []
+        },
         //"All-in-one" build task
         {
             "label": "build",
@@ -85,6 +105,7 @@
             "dependsOn": [
                 "setup",
                 "settingscheck",
+                "py-build",
                 "cli-build",
             ],
             "problemMatcher": []

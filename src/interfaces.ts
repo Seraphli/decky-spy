@@ -156,8 +156,8 @@ export const DefaultSettings: Settings = {
 		interval: 15,
 	},
 	debug: {
-		frontend: false,
-		backend: false,
+		frontend: true,
+		backend: true,
 	},
 };
 

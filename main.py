@@ -2,7 +2,6 @@ import json
 import os
 import subprocess
 import traceback
-from os.path import expanduser
 
 # The decky plugin module is located at decky-loader/plugin
 # For easy intellisense checkout the decky-loader code one directory up
@@ -10,8 +9,16 @@ from os.path import expanduser
 import decky_plugin
 from settings import SettingsManager
 
-HOME = expanduser("~")
-VENV_PYTHON = f"{HOME}/.pyenv/versions/decky-spy/bin/python"
+
+def run_command(command):
+    """Executes a system command and returns the output."""
+    try:
+        result = subprocess.run(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        return result.stdout.strip(), result.stderr.strip(), result.returncode
+    except Exception as e:
+        return None, str(e), -1
 
 
 class Plugin:
@@ -27,7 +34,7 @@ class Plugin:
         await Plugin.log_py(self, f"cli call: {command} {args}")
         try:
             out = subprocess.check_output(
-                f"{VENV_PYTHON} '{os.path.dirname(__file__)}/py_modules/deckyspy/cli.py' {command} {args}",
+                f"{os.path.dirname(__file__)}/cli {command} {args}",
                 stderr=subprocess.STDOUT,
                 shell=True,
             ).decode()
@@ -36,7 +43,7 @@ class Plugin:
             payload = {"code": 0, "data": json.dumps(json_out["result"])}
             await Plugin.log_py(self, f"return payload: {payload}")
             return payload
-        except:
+        except Exception:
             except_info = traceback.format_exc()
             await Plugin.log_py_err(self, f"exception info: {except_info}")
             payload = {"code": 1, "data": except_info}
@@ -62,7 +69,7 @@ class Plugin:
         return await Plugin.cli(self, "get-net-interface")
 
     async def log(self, message):
-        value = await Plugin.get_settings(self, "debug.frontend", False, string=False)
+        value = await Plugin.get_settings(self, "debug.frontend", True, string=False)
         if value:
             decky_plugin.logger.info("[DeckySpy][F]" + message)
 
@@ -70,7 +77,7 @@ class Plugin:
         decky_plugin.logger.error("[DeckySpy][F]" + message)
 
     async def log_py(self, message):
-        value = await Plugin.get_settings(self, "debug.backend", False, string=False)
+        value = await Plugin.get_settings(self, "debug.backend", True, string=False)
         if value:
             decky_plugin.logger.info("[DeckySpy][B]" + message)
 
@@ -93,6 +100,8 @@ class Plugin:
     async def _main(self):
         self.settingsManager.read()
         decky_plugin.logger.info(f"=== Load Decky Spy ver{self.VERSION} ===")
+        ret = run_command(["chmod", "+x", f"{os.path.dirname(__file__)}/cli"])
+        decky_plugin.logger.info(f"CLI chmod: {ret}")
 
     # Function called first during the unload process, utilize this to handle your plugin being removed
     async def _unload(self):
