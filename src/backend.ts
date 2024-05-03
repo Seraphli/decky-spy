@@ -33,20 +33,32 @@ export class Backend {
     private aaLastWarnTime: number = 0;
     private queueForSaveTime: number | null = null;
     private unregisterHandlers: (() => void)[] = [];
-
+    private token = '';
     constructor(serverAPI: ServerAPI) {
         this.serverAPI = serverAPI;
     }
 
     async setup() {
+        await this.getToken();
+        if (!(await this.checkToken())) {
+            return false;
+        }
         await this.loadSettings();
         await this.saveSettings();
         await this.getVersion();
         await this.getBoottime();
 
         this.unregisterHandlers.push(this.setupSuspendResumeHandler());
+        return true;
     }
 
+    // Avoid repeated setup after reload
+    async getToken() {
+        this.token = await this.bridge('get_token');
+    }
+    async checkToken() {
+        return await this.bridge('check_token', { token: this.token });
+    }
     async getVersion() {
         const result = await this.bridge('get_version');
         if (result && result !== null) {
@@ -492,10 +504,19 @@ export class Backend {
     }
 
     async bridge(functionName: string, namedArgs?: any) {
+        if (
+            functionName !== 'check_token' &&
+            functionName !== 'get_token' &&
+            !(await this.checkToken())
+        ) {
+            return null;
+        }
         namedArgs = namedArgs ? namedArgs : {};
         await this.log({
             sender: 'bridge',
-            message: `${functionName} call with ${JSON.stringify(namedArgs)}`,
+            message: `${functionName} call with ${JSON.stringify(
+                namedArgs,
+            )}, token: ${this.token}`,
         });
         const ret = await this.serverAPI.callPluginMethod<any, BackendReturn>(
             functionName,
@@ -503,7 +524,9 @@ export class Backend {
         );
         await this.log({
             sender: 'bridge',
-            message: `${functionName} return ${JSON.stringify(ret)}`,
+            message: `${functionName} return ${JSON.stringify(ret)}, token: ${
+                this.token
+            }`,
         });
         if (ret.success) {
             if (ret.result == null) {

@@ -19,7 +19,6 @@ import {
     convertSecondsToHumanReadable,
 } from './utils';
 
-let backendIsSetup = false;
 let backendPollTimerRef: NodeJS.Timeout | undefined;
 
 const Content: VFC<{ backend: Backend }> = ({ backend }) => {
@@ -68,7 +67,7 @@ const Content: VFC<{ backend: Backend }> = ({ backend }) => {
                 <SliderField
                     label="Refresh Interval (seconds)"
                     value={settings.refresh.interval}
-                    min={1}
+                    min={5}
                     max={60}
                     step={1}
                     showValue={true}
@@ -544,16 +543,18 @@ export default definePlugin((serverAPI: ServerAPI) => {
         clearInterval(backendPollTimerRef);
         backendPollTimerRef = undefined;
     }
-    if (!backendIsSetup) {
-        backendIsSetup = true;
-        backend.setup().then(() => {
+    function regularFunction() {
+        (async () => {
+            const ret = await backend.setup();
+            if (!ret) return;
             if (backendPollTimerRef === undefined) {
                 backendPollTimerRef = setInterval(async () => {
                     await backend.refreshStatus();
                 }, 1000);
             }
-        });
+        })();
     }
+    regularFunction();
 
     return {
         title: <div className={staticClasses.Title}>Decky Spy</div>,
