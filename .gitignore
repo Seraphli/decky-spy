@@ -57,4 +57,3 @@ cli/*
 cli/decky
 deck.json
 py_build/output/*
-defaults/cli
