@@ -11,9 +11,8 @@ from typing import Dict
 # For easy intellisense checkout the decky-loader code one directory up
 # or add the `decky-loader/plugin` path to `python.analysis.extraPaths` in `.vscode/settings.json`
 import decky_plugin
+import psutil
 from settings import SettingsManager
-
-from py_modules import psutil
 
 
 def wrap_return(data, code=0):
