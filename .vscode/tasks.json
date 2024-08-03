@@ -105,7 +105,6 @@
             "dependsOn": [
                 "setup",
                 "settingscheck",
-                "py-build",
                 "cli-build",
             ],
             "problemMatcher": []
