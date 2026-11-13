@@ -547,16 +547,23 @@ export class Backend {
     }
 
     setupSuspendResumeHandler() {
-        const { unregister: unregisterOnResumeFromSuspend } =
-            SteamClient.System.RegisterForOnResumeFromSuspend(() => {
-                if (Router.RunningApps.length > 0) {
-                    this.systemInfo.gameSessionStartTime = Date.now() / 1000;
-                    this.aaLastWarnTime = 0;
-                }
-            });
+        const onResume = () => {
+            if (Router.RunningApps.length > 0) {
+                this.systemInfo.gameSessionStartTime = Date.now() / 1000;
+                this.aaLastWarnTime = 0;
+            }
+        };
+        // SteamClient.System.RegisterForOnResumeFromSuspend was removed in the
+        // Steam Deck Beta Client Update of September 17th; the resume event of
+        // SteamClient.User replaces it. Nothing is registered if neither exists.
+        const registration =
+            SteamClient.System?.RegisterForOnResumeFromSuspend?.(onResume) ??
+            SteamClient.User?.RegisterForResumeSuspendedGamesProgress?.(
+                onResume,
+            );
 
         return () => {
-            unregisterOnResumeFromSuspend();
+            registration?.unregister();
         };
     }
 
